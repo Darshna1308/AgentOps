@@ -40,7 +40,7 @@ The goal is to make AI-agent behavior **observable, measurable, and easier to de
 
 ## Core Features
 
-### 🔍 Agent Execution Monitoring
+###  Agent Execution Monitoring
 Tracks each AI-agent run with:
 - Prompt and response
 - Execution status
@@ -49,14 +49,14 @@ Tracks each AI-agent run with:
 - Token usage
 - Estimated cost
 
-### 🧠 Agent Decision Tracking
+###  Agent Decision Tracking
 Records how each request was handled:
 - Direct AI execution
 - Tool-based execution
 - Routing reason
 - Selected tools
 
-### 🛠️ Tool Execution Monitoring
+###  Tool Execution Monitoring
 Currently supports:
 - Calculator tool
 - Text analyzer tool
@@ -64,24 +64,24 @@ Currently supports:
 - Tool success/failure status
 - Individual tool latency
 
-### 📊 Evaluation
+###  Evaluation
 Each completed run receives:
 - Relevance score
 - Quality score
 - Overall score
 - Evaluation reasoning
 
-### 🚨 Failure Monitoring
+###  Failure Monitoring
 Failed AI-service requests are persisted so failures remain visible in the dashboard instead of disappearing after the request ends.
 
-### 👤 Human Feedback
+###  Human Feedback
 Reviewers can mark responses as:
 - Good
 - Needs improvement
 
 Optional comments are stored with the run.
 
-### 📈 Dashboard Analytics
+###  Dashboard Analytics
 The dashboard provides:
 - Run search and filtering
 - Success/failure visibility
