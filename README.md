@@ -127,8 +127,8 @@ AgentOps uses a modular architecture with separate frontend, backend, and AI-ser
 
 ### Request Flow
 
-1. User interacts with the AgentOps dashboard.
-2. React sends the request to the Express backend.
+1. An AI request is sent to the AgentOps backend API.
+2. The React dashboard retrieves and visualizes persisted agent runs from the Express backend.
 3. The backend validates the request and determines the execution route.
 4. Required tools are executed when applicable.
 5. The backend sends the AI request to the FastAPI service.
