@@ -325,11 +325,23 @@ The AI service runs separately from the main Express backend.
 
 ## Screenshots
 
-### AgentOps Dashboard
+### Dashboard Overview
 
-The dashboard provides an overview of AI-agent executions, including success/failure status, latency, token usage, cost, evaluations, tool calls, and human feedback.
+![AgentOps Dashboard](docs/screenshots/dashboard.png)
 
-> Screenshots will be added here after the final UI and deployment setup.
+The dashboard provides an overview of agent executions, success and failure rates, latency, token usage, estimated cost, routing, and evaluation metrics.
+
+### Run Details
+
+![Agent Run Details](docs/screenshots/run-details.png)
+
+Each execution can be inspected through its agent decision, model response, latency, token usage, evaluation scores, and tool activity.
+
+### Human Feedback
+
+![Human Feedback](docs/screenshots/feedback.png)
+
+Human reviewers can rate responses and provide optional feedback comments for individual agent runs.
 
 ### Run Details
 
