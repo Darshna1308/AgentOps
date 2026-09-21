@@ -1,0 +1,43 @@
+services:
+  mongo:
+    image: mongo:8
+    container_name: agentops-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - agentops-mongo-data:/data/db
+    networks:
+      - agentops-network
+
+  ai:
+    build:
+      context: ./ai-service
+    container_name: agentops-ai
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./ai-service/.env
+    networks:
+      - agentops-network
+
+  backend:
+    build:
+      context: ./backend
+    container_name: agentops-backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - mongo
+      - ai
+    networks:
+      - agentops-network
+
+networks:
+  agentops-network:
+
+volumes:
+  agentops-mongo-data:
+    external: true
+    name: agentops-mongo-data

@@ -2,230 +2,332 @@
 
 ### Production AI Agent Monitoring & Evaluation Platform
 
-AgentOps is an observability platform for monitoring and evaluating AI-agent executions.
+AgentOps is an observability platform designed to monitor, evaluate, and debug AI-agent executions.
 
-Instead of treating an AI application as a simple input → output system, AgentOps captures what happened during each run — including routing decisions, tool usage, latency, token consumption, estimated cost, evaluation results, failures, and human feedback.
+Instead of treating an AI application as a simple chatbot, AgentOps provides visibility into each execution — including the prompt, AI response, latency, token usage, estimated cost, tool usage, agent decisions, evaluation scores, and human feedback.
 
-### Why AgentOps?
+---
 
-AI agents can fail in ways that are difficult to understand from the final response alone.
+## 🚀 Why AgentOps?
 
-AgentOps provides visibility into each execution so developers can answer questions such as:
+AI agents can produce useful responses, but understanding how well they performed is often difficult.
 
-- What decision did the agent make?
+AgentOps provides a centralized dashboard to answer questions such as:
+
+- What prompts were executed?
+- How long did each AI request take?
+- How many tokens were used?
+- What was the estimated execution cost?
 - Which tools were used?
-- Did a tool fail?
-- How long did the execution take?
-- How many tokens were consumed?
-- What was the estimated cost?
-- How was the response evaluated?
-- What did the human reviewer think about the result?
+- What decision did the agent make?
+- How relevant and high-quality was the response?
+- Did a human reviewer approve or reject the result?
 
-The goal is to make AI-agent behavior **observable, measurable, and easier to debug**.
+The goal is to make AI-agent behavior easier to **monitor, evaluate, and debug**.
 
+---
 
-## Tech Stack
+## ✨ Features
 
-| Layer | Technology |
-|---|---|
-| Frontend | React + Vite |
-| Backend | Node.js + Express |
-| Database | MongoDB + Mongoose |
-| AI Service | Python + FastAPI |
-| LLM | Groq — `openai/gpt-oss-20b` |
-| API Communication | REST APIs |
-| API Testing | Postman |
-| Styling | CSS |
-| Security | Helmet, Rate Limiting, Restricted CORS |
+### 📊 AI Execution Monitoring
 
-## Core Features
+Track individual AI-agent executions with:
 
-###  Agent Execution Monitoring
-Tracks each AI-agent run with:
-- Prompt and response
+- Prompt
+- AI response
 - Execution status
 - Model used
-- End-to-end latency
+- Latency
 - Token usage
 - Estimated cost
+- Creation timestamp
 
-###  Agent Decision Tracking
-Records how each request was handled:
-- Direct AI execution
-- Tool-based execution
-- Routing reason
-- Selected tools
+### 🧠 Agent Decision Tracking
 
-###  Tool Execution Monitoring
-Currently supports:
-- Calculator tool
-- Text analyzer tool
-- Tool input and output tracking
-- Tool success/failure status
-- Individual tool latency
+AgentOps records execution decision metadata including:
 
-###  Evaluation
-Each completed run receives:
+- Selected route
+- Decision reason
+- Tools selected
+
+### 🛠️ Tool Usage Monitoring
+
+Track tool executions including:
+
+- Tool name
+- Input
+- Output
+- Execution status
+- Tool latency
+
+Current internal tools include:
+
+- Calculator
+- Text Analyzer
+
+### 📈 AI Response Evaluation
+
+Each AI response is automatically evaluated using:
+
 - Relevance score
 - Quality score
 - Overall score
-- Evaluation reasoning
+- Evaluation reason
 
-###  Failure Monitoring
-Failed AI-service requests are persisted so failures remain visible in the dashboard instead of disappearing after the request ends.
+### 👤 Human Feedback
 
-###  Human Feedback
-Reviewers can mark responses as:
+Developers can manually review AI responses and provide:
+
 - Good
-- Needs improvement
+- Needs Improvement
+- Optional feedback comment
 
-Optional comments are stored with the run.
+### 🔎 Search & Filtering
 
-###  Dashboard Analytics
-The dashboard provides:
-- Run search and filtering
-- Success/failure visibility
-- Latency analytics
-- Token and cost information
-- Tool usage details
-- Run-level evaluation and feedback
+Search and filter recorded AI-agent runs directly from the dashboard.
 
-## Architecture
+### 📊 Analytics Dashboard
 
-AgentOps uses a modular architecture with separate frontend, backend, and AI-service layers.
+The dashboard provides insights into:
+
+- Total runs
+- Successful runs
+- Failed runs
+- Average latency
+- Average evaluation score
+- Token usage
+- Execution cost
+
+### 📝 Markdown Support
+
+AI responses support Markdown formatting including:
+
+- Headings
+- Lists
+- Code blocks
+- Tables
+- Bold and italic text
+
+---
+
+## 🏗️ System Architecture
 
 ```text
-                    ┌─────────────────────┐
-                    │   React + Vite       │
-                    │     Dashboard        │
-                    └──────────┬──────────┘
-                               │
-                               │ REST API
-                               ▼
-                    ┌─────────────────────┐
-                    │ Node.js + Express    │
-                    │      Backend         │
-                    │                     │
-                    │ • Routing           │
-                    │ • Tool Execution    │
-                    │ • Evaluation        │
-                    │ • Logging           │
-                    │ • Validation        │
-                    └───────┬───────┬─────┘
-                            │       │
-                 ┌──────────┘       └──────────┐
-                 ▼                             ▼
-        ┌─────────────────┐          ┌─────────────────┐
-        │    MongoDB      │          │ Python FastAPI  │
-        │                 │          │   AI Service    │
-        │ • Agent Runs    │          │                 │
-        │ • Tool Calls    │          │ • Groq LLM      │
-        │ • Evaluation    │          │ • AI Response   │
-        │ • Feedback      │          └─────────────────┘
-        └─────────────────┘
+                         ┌──────────────────────┐
+                         │      React UI        │
+                         │      Vite + React    │
+                         │                      │
+                         │ Dashboard / Analytics│
+                         │ Runs / Feedback      │
+                         └──────────┬───────────┘
+                                    │
+                                    │ HTTP
+                                    ▼
+                         ┌──────────────────────┐
+                         │   Node.js Backend    │
+                         │      Express         │
+                         │                      │
+                         │ API + Evaluation     │
+                         │ Tool Detection       │
+                         │ Logging + Security   │
+                         └───────┬────────┬─────┘
+                                 │        │
+                         HTTP    │        │ MongoDB
+                                 │        │
+                                 ▼        ▼
+                    ┌────────────────┐  ┌────────────────┐
+                    │  Python AI     │  │    MongoDB     │
+                    │    Service     │  │                │
+                    │    FastAPI     │  │ Agent Runs     │
+                    │                │  │ Feedback       │
+                    │     Groq       │  │ Evaluations    │
+                    └───────┬────────┘  └────────────────┘
+                            │
+                            ▼
+                    ┌────────────────┐
+                    │    Groq LLM    │
+                    │  gpt-oss-20b   │
+                    └────────────────┘
 ```
 
-### Request Flow
+---
 
-1. An AI request is sent to the AgentOps backend API.
-2. The React dashboard retrieves and visualizes persisted agent runs from the Express backend.
-3. The backend validates the request and determines the execution route.
-4. Required tools are executed when applicable.
-5. The backend sends the AI request to the FastAPI service.
-6. The FastAPI service communicates with the Groq LLM.
-7. The backend collects the AI response, tool results, latency, tokens, and evaluation data.
-8. The complete run is stored in MongoDB.
-9. The dashboard displays the execution details and analytics.
+## 🔄 Request Flow
 
-## Project Structure
+```text
+User Prompt
+     │
+     ▼
+React Frontend
+     │
+     ▼
+Express Backend
+     │
+     ├── Detect tools
+     ├── Execute tools if required
+     ├── Send prompt to AI service
+     │
+     ▼
+FastAPI AI Service
+     │
+     ▼
+Groq LLM
+     │
+     ▼
+AI Response
+     │
+     ▼
+Backend Evaluation
+     │
+     ├── Relevance
+     ├── Quality
+     └── Overall Score
+     │
+     ▼
+MongoDB
+     │
+     ▼
+AgentOps Dashboard
+```
+
+---
+
+## 🐳 Docker Architecture
+
+AgentOps uses Docker Compose to run the backend infrastructure as separate services.
+
+```text
+                 AgentOps Docker Network
+                         │
+       ┌─────────────────┼─────────────────┐
+       │                 │                 │
+       ▼                 ▼                 ▼
+ ┌──────────┐      ┌─────────────┐   ┌─────────────┐
+ │ MongoDB  │      │ AI Service  │   │   Backend   │
+ │          │      │             │   │             │
+ │  27017   │      │  FastAPI    │   │   Express   │
+ │          │      │    8000     │   │    5000     │
+ └──────────┘      └─────────────┘   └─────────────┘
+                                           │
+                                           ▼
+                                    React Frontend
+                                      Port 5173
+```
+
+MongoDB uses a persistent Docker volume so stored AgentOps runs survive container recreation.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React, Vite, CSS |
+| Markdown | React Markdown, Remark GFM |
+| Backend | Node.js, Express.js |
+| Database | MongoDB, Mongoose |
+| AI Service | Python, FastAPI |
+| LLM | Groq — `openai/gpt-oss-20b` |
+| HTTP Client | Axios |
+| Security | Helmet, Express Rate Limit |
+| Containerization | Docker, Docker Compose |
+| API Testing | Postman |
+| Version Control | Git, GitHub |
+
+---
+
+## 📁 Project Structure
 
 ```text
 AgentOps/
 │
-├── frontend/
-│   ├── src/
-│   ├── public/
-│   ├── .env
-│   └── package.json
-│
 ├── backend/
-│   ├── server.js
 │   ├── agentRun.js
 │   ├── db.js
 │   ├── logger.js
-│   ├── .env
-│   └── package.json
+│   ├── server.js
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── Dockerfile
+│   └── .gitignore
 │
 ├── ai-service/
 │   ├── main.py
-│   ├── .env
-│   ├── .gitignore
-│   └── requirements.txt
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   └── .gitignore
 │
-└── README.md
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx
+│   │   ├── App.css
+│   │   └── main.jsx
+│   ├── package.json
+│   ├── package-lock.json
+│   └── vite.config.js
+│
+├── docs/
+│   └── screenshots/
+│
+├── compose.yaml
+├── README.md
+└── LICENSE
 ```
 
-> Environment files (`.env`) and local dependencies such as `node_modules`, `venv`, and `__pycache__` are excluded from version control.
+---
 
-## Setup & Installation
+## ⚙️ Setup & Installation
 
 ### Prerequisites
 
 Make sure the following are installed:
 
 - Node.js
-- Python 3
-- MongoDB
+- npm
+- Python
+- Docker Desktop
 - Git
-- A Groq API key
+- MongoDB or Docker
 
-### 1. Clone the repository
+### Clone the Repository
 
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+git clone https://github.com/Darshna1308/AgentOps.git
 cd AgentOps
 ```
 
-### 2. Start the AI Service
+### Run with Docker Compose
+
+The recommended way to run the backend infrastructure is Docker Compose.
 
 ```bash
-cd ai-service
-
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-pip install -r requirements.txt
-
-uvicorn main:app --reload --port 8000
+docker compose up -d --build
 ```
 
-The AI service runs on:
-
-```text
-http://127.0.0.1:8000
-```
-
-### 3. Start the Backend
-
-Open another terminal:
+Check the running containers:
 
 ```bash
-cd backend
-npm install
-node server.js
+docker ps
 ```
 
-The backend runs on:
+Stop the services:
 
-```text
-http://localhost:5000
+```bash
+docker compose down
 ```
 
-### 4. Start the Frontend
+### Service Ports
 
-Open another terminal:
+| Service | Port |
+|---|---:|
+| React Frontend | 5173 |
+| Node.js Backend | 5000 |
+| Python AI Service | 8000 |
+| MongoDB | 27017 |
+
+---
+
+## 🌐 Frontend Setup
 
 ```bash
 cd frontend
@@ -233,43 +335,74 @@ npm install
 npm run dev
 ```
 
-The dashboard runs on:
+Open the frontend at:
 
-```text
-http://localhost:5173
+    http://localhost:5173
+
+---
+
+## 🔧 Backend Setup
+
+```bash
+cd backend
+npm install
+node server.js
 ```
 
-### Environment Variables
+Backend API:
 
-#### Backend — `backend/.env`
+    http://localhost:5000
+
+---
+
+## 🤖 AI Service Setup
+
+```bash
+cd ai-service
+python -m venv venv
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+
+AI service:
+
+    http://localhost:8000
+
+---
+
+## 🔐 Environment Variables
+
+Environment files containing secrets are excluded from Git.
+
+### Backend
+
+`backend/.env`
 
 ```env
 PORT=5000
-MONGODB_URI=mongodb://127.0.0.1:27017/agentops
-AI_SERVICE_URL=http://127.0.0.1:8000
+MONGODB_URI=mongodb://agentops-mongo:27017/agentops
+AI_SERVICE_URL=http://agentops-ai:8000
 ```
 
-#### AI Service — `ai-service/.env`
+### AI Service
+
+`ai-service/.env`
 
 ```env
 GROQ_API_KEY=your_groq_api_key
 ```
 
-#### Frontend — `frontend/.env`
+Never commit API keys or other sensitive credentials to GitHub.
 
-```env
-VITE_API_URL=http://localhost:5000
+---
+
+## 🔌 API Endpoints
+
+### Run AI Agent
+
+```http
+POST /api/ai/run
 ```
-
-> Never commit real API keys or `.env` files to GitHub.
-
-## API Endpoints
-
-### AI Execution
-
-**POST** `/api/ai/run`
-
-Runs an AI-agent request and stores the execution details.
 
 Example request:
 
@@ -279,28 +412,28 @@ Example request:
 }
 ```
 
----
+The backend sends the request to the AI service, evaluates the response, and stores the execution details in MongoDB.
 
 ### Get Agent Runs
 
-**GET** `/api/runs`
+```http
+GET /api/runs
+```
 
-Returns stored agent executions for the dashboard.
-
----
+Returns recorded AI-agent executions.
 
 ### Submit Human Feedback
 
-**POST** `/api/runs/:id/feedback`
-
-Stores human feedback for a specific agent run.
+```http
+POST /api/runs/:id/feedback
+```
 
 Example request:
 
 ```json
 {
   "rating": "good",
-  "comment": "The response was relevant and clear."
+  "comment": "The response was clear and relevant."
 }
 ```
 
@@ -311,78 +444,159 @@ Supported ratings:
 
 ---
 
-### AI Service
+## 🛡️ Security
 
-**POST** `/run`
+AgentOps includes several backend security measures:
 
-Sends a prompt to the Groq-powered AI service and returns:
-
-- AI response
-- Execution latency
-- Token usage
-
-The AI service runs separately from the main Express backend.
-
-## Screenshots
-
-### Dashboard Overview
-
-![AgentOps Dashboard](docs/screenshots/dashboard.png)
-
-The dashboard provides an overview of agent executions, success and failure rates, latency, token usage, estimated cost, routing, and evaluation metrics.
-
-### Run Details
-
-![Agent Run Details](docs/screenshots/run-details.png)
-
-Each execution can be inspected through its agent decision, model response, latency, token usage, evaluation scores, and tool activity.
-
-### Human Feedback
-
-![Human Feedback](docs/screenshots/feedback.png)
-
-Human reviewers can rate responses and provide optional feedback comments for individual agent runs.
-
-### Run Details
-
-The run details view provides execution-level visibility into:
-
-- Agent decisions
-- Tool calls
-- Tool success/failure
-- AI response
-- Latency and token usage
-- Evaluation scores
-- Human feedback
-
-## Project Status
-
-AgentOps is currently in active development with the core monitoring and evaluation workflow implemented.
-
-### Implemented
-
-- AI-agent execution tracking
-- Tool execution monitoring
-- Agent decision tracking
-- Latency and token tracking
-- Estimated cost tracking
-- Automated response evaluation
-- Failed-run persistence
-- Human feedback
-- Dashboard analytics
-- Search and filtering
-- Markdown response rendering
-- Structured backend logging
-- API rate limiting
-- Security headers with Helmet
+- Environment-based secret management
+- Helmet security headers
 - Restricted CORS
-- Environment-based configuration
+- API rate limiting
+- Request validation
+- Centralized error handling
+- Structured application logging
+- No hard-coded API keys
+- Secrets excluded from version control
+
+---
+
+## 🧪 Testing
+
+The main application flow has been tested across:
+
+- Backend API
+- AI service communication
 - MongoDB persistence
+- Docker Compose networking
+- AI execution
+- Response evaluation
+- Run persistence
+- Dashboard rendering
+- Search and filtering
+- Human feedback
+- Markdown responses
+- Rate limiting
+- Security headers
+- CORS configuration
+
+---
+
+## 📊 Dashboard
+
+The AgentOps dashboard provides a centralized view of AI-agent activity.
+
+It includes:
+
+- Execution statistics
+- Latency analytics
+- Run search
+- Run filtering
+- Detailed execution information
+- Tool execution details
+- Agent decision metadata
+- AI response evaluation
+- Human feedback
+
+### Screenshots
+
+Recommended screenshots can be stored in:
+
+```text
+docs/screenshots/
+```
+
+For example:
+
+```text
+docs/screenshots/dashboard.png
+docs/screenshots/run-details.png
+docs/screenshots/feedback.png
+```
+
+Then displayed in the README using:
+
+```markdown
+![AgentOps Dashboard](docs/screenshots/dashboard.png)
+```
+
+---
+
+## 📌 Project Status
+
+### Completed
+
+- React dashboard
+- Node.js/Express backend
+- Python/FastAPI AI service
+- Groq LLM integration
+- MongoDB persistence
+- AI execution tracking
+- Tool execution tracking
+- Agent decision tracking
+- Automatic response evaluation
+- Human feedback
+- Analytics dashboard
+- Search and filtering
+- Markdown rendering
+- Structured logging
+- Rate limiting
+- Helmet security
+- Restricted CORS
+- Docker Compose setup
+- Persistent MongoDB volume
+- GitHub repository
 
 ### Planned Improvements
 
-- Docker containerization
-- CI/CD with GitHub Actions
+- Authentication and authorization
+- Role-based access control
+- OpenTelemetry integration
+- Additional agent tools
+- Advanced evaluation metrics
+- CI/CD pipeline
 - Production deployment
-- OpenTelemetry-based observability
-- Additional agent tools and evaluation metrics
+- Advanced observability
+- More detailed analytics
+
+---
+
+## 🎯 What AgentOps Demonstrates
+
+This project demonstrates practical experience with:
+
+- Full-stack development
+- AI/LLM integration
+- AI-agent observability
+- REST API development
+- Backend architecture
+- Database design
+- AI response evaluation
+- Tool execution tracking
+- Docker containerization
+- Security practices
+- Structured logging
+- Monitoring concepts
+- React dashboard development
+
+---
+
+## 👩‍💻 Author
+
+**Darshna Parihar**
+
+Computer Science Engineering Student  
+Chandigarh University
+
+**GitHub:**  
+https://github.com/Darshna1308
+
+**Project Repository:**  
+https://github.com/Darshna1308/AgentOps
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+See the `LICENSE` file for details.
