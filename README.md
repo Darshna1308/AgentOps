@@ -2,28 +2,15 @@
 
 ### Production AI Agent Monitoring & Evaluation Platform
 
-AgentOps is an observability platform designed to monitor, evaluate, and debug AI-agent executions.
+AgentOps is a full-stack AI observability platform for monitoring, evaluating, and debugging AI-agent executions.
 
-Instead of treating an AI application as a simple chatbot, AgentOps provides visibility into each execution — including the prompt, AI response, latency, token usage, estimated cost, tool usage, agent decisions, evaluation scores, and human feedback.
+It tracks each agent run across **routing, tool usage, AI execution, latency, token consumption, estimated cost, response quality, and human feedback** through a centralized dashboard.
 
----
+### Why AgentOps?
 
-## Why AgentOps?
+Building an AI application is only part of the problem. Developers also need to understand **what happened during an execution, how the agent made decisions, how much the request cost, and whether the response was actually useful**.
 
-AI agents can produce useful responses, but understanding how well they performed is often difficult.
-
-AgentOps provides a centralized dashboard to answer questions such as:
-
-- What prompts were executed?
-- How long did each AI request take?
-- How many tokens were used?
-- What was the estimated execution cost?
-- Which tools were used?
-- What decision did the agent make?
-- How relevant and high-quality was the response?
-- Did a human reviewer approve or reject the result?
-
-The goal is to make AI-agent behavior easier to **monitor, evaluate, and debug**.
+AgentOps provides this visibility in one place, turning individual AI executions into **traceable, measurable, and reviewable runs**.
 
 ---
 
@@ -481,43 +468,34 @@ The main application flow has been tested across:
 
 ---
 
-##  Dashboard
+## Dashboard
 
-The AgentOps dashboard provides a centralized view of AI-agent activity.
+AgentOps provides a centralized dashboard for monitoring and investigating AI-agent executions.
 
 It includes:
 
 - Execution statistics
 - Latency analytics
-- Run search
-- Run filtering
-- Detailed execution information
-- Tool execution details
+- Run search and filtering
+- Detailed execution timelines
 - Agent decision metadata
+- Tool execution details
 - AI response evaluation
 - Human feedback
 
 ### Screenshots
 
-Recommended screenshots can be stored in:
+#### Dashboard
 
-```text
-docs/screenshots/
-```
-
-For example:
-
-```text
-docs/screenshots/dashboard.png
-docs/screenshots/run-details.png
-docs/screenshots/feedback.png
-```
-
-Then displayed in the README using:
-
-```markdown
 ![AgentOps Dashboard](docs/screenshots/dashboard.png)
-```
+
+#### Run Details
+
+![AgentOps Run Details](docs/screenshots/run-details.png)
+
+#### Human Feedback
+
+![AgentOps Human Feedback](docs/screenshots/feedback.png)
 
 ---
 
