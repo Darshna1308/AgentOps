@@ -8,7 +8,7 @@ Instead of treating an AI application as a simple chatbot, AgentOps provides vis
 
 ---
 
-## 🚀 Why AgentOps?
+## Why AgentOps?
 
 AI agents can produce useful responses, but understanding how well they performed is often difficult.
 
@@ -27,9 +27,9 @@ The goal is to make AI-agent behavior easier to **monitor, evaluate, and debug**
 
 ---
 
-## ✨ Features
+##  Features
 
-### 📊 AI Execution Monitoring
+###  AI Execution Monitoring
 
 Track individual AI-agent executions with:
 
@@ -42,7 +42,7 @@ Track individual AI-agent executions with:
 - Estimated cost
 - Creation timestamp
 
-### 🧠 Agent Decision Tracking
+###  Agent Decision Tracking
 
 AgentOps records execution decision metadata including:
 
@@ -50,7 +50,7 @@ AgentOps records execution decision metadata including:
 - Decision reason
 - Tools selected
 
-### 🛠️ Tool Usage Monitoring
+###  Tool Usage Monitoring
 
 Track tool executions including:
 
@@ -65,7 +65,7 @@ Current internal tools include:
 - Calculator
 - Text Analyzer
 
-### 📈 AI Response Evaluation
+###  AI Response Evaluation
 
 Each AI response is automatically evaluated using:
 
@@ -74,7 +74,7 @@ Each AI response is automatically evaluated using:
 - Overall score
 - Evaluation reason
 
-### 👤 Human Feedback
+###  Human Feedback
 
 Developers can manually review AI responses and provide:
 
@@ -82,11 +82,11 @@ Developers can manually review AI responses and provide:
 - Needs Improvement
 - Optional feedback comment
 
-### 🔎 Search & Filtering
+###  Search & Filtering
 
 Search and filter recorded AI-agent runs directly from the dashboard.
 
-### 📊 Analytics Dashboard
+###  Analytics Dashboard
 
 The dashboard provides insights into:
 
@@ -98,7 +98,7 @@ The dashboard provides insights into:
 - Token usage
 - Execution cost
 
-### 📝 Markdown Support
+###  Markdown Support
 
 AI responses support Markdown formatting including:
 
@@ -110,7 +110,7 @@ AI responses support Markdown formatting including:
 
 ---
 
-## 🏗️ System Architecture
+##  System Architecture
 
 ```text
                          ┌──────────────────────┐
@@ -152,7 +152,7 @@ AI responses support Markdown formatting including:
 
 ---
 
-## 🔄 Request Flow
+##  Request Flow
 
 ```text
 User Prompt
@@ -192,7 +192,7 @@ AgentOps Dashboard
 
 ---
 
-## 🐳 Docker Architecture
+##  Docker Architecture
 
 AgentOps uses Docker Compose to run the backend infrastructure as separate services.
 
@@ -218,7 +218,7 @@ MongoDB uses a persistent Docker volume so stored AgentOps runs survive containe
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -236,7 +236,7 @@ MongoDB uses a persistent Docker volume so stored AgentOps runs survive containe
 
 ---
 
-## 📁 Project Structure
+##  Project Structure
 
 ```text
 AgentOps/
@@ -276,7 +276,7 @@ AgentOps/
 
 ---
 
-## ⚙️ Setup & Installation
+##  Setup & Installation
 
 ### Prerequisites
 
@@ -327,7 +327,7 @@ docker compose down
 
 ---
 
-## 🌐 Frontend Setup
+##  Frontend Setup
 
 ```bash
 cd frontend
@@ -341,7 +341,7 @@ Open the frontend at:
 
 ---
 
-## 🔧 Backend Setup
+##  Backend Setup
 
 ```bash
 cd backend
@@ -355,7 +355,7 @@ Backend API:
 
 ---
 
-## 🤖 AI Service Setup
+##  AI Service Setup
 
 ```bash
 cd ai-service
@@ -370,7 +370,7 @@ AI service:
 
 ---
 
-## 🔐 Environment Variables
+##  Environment Variables
 
 Environment files containing secrets are excluded from Git.
 
@@ -396,7 +396,7 @@ Never commit API keys or other sensitive credentials to GitHub.
 
 ---
 
-## 🔌 API Endpoints
+##  API Endpoints
 
 ### Run AI Agent
 
@@ -444,7 +444,7 @@ Supported ratings:
 
 ---
 
-## 🛡️ Security
+##  Security
 
 AgentOps includes several backend security measures:
 
@@ -460,7 +460,7 @@ AgentOps includes several backend security measures:
 
 ---
 
-## 🧪 Testing
+##  Testing
 
 The main application flow has been tested across:
 
@@ -481,7 +481,7 @@ The main application flow has been tested across:
 
 ---
 
-## 📊 Dashboard
+##  Dashboard
 
 The AgentOps dashboard provides a centralized view of AI-agent activity.
 
@@ -521,7 +521,7 @@ Then displayed in the README using:
 
 ---
 
-## 📌 Project Status
+##  Project Status
 
 ### Completed
 
@@ -560,7 +560,7 @@ Then displayed in the README using:
 
 ---
 
-## 🎯 What AgentOps Demonstrates
+##  What AgentOps Demonstrates
 
 This project demonstrates practical experience with:
 
@@ -580,7 +580,7 @@ This project demonstrates practical experience with:
 
 ---
 
-## 👩‍💻 Author
+##  Author
 
 **Darshna Parihar**
 
