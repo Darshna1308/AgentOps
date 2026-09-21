@@ -647,6 +647,10 @@ function App() {
   const [loading, setLoading] =
     useState(true);
   const [error, setError] = useState("");
+    const [prompt, setPrompt] = useState("");
+  const [runLoading, setRunLoading] = useState(false);
+  const [runError, setRunError] = useState("");
+  const [runSuccess, setRunSuccess] = useState("");
 
   const [search, setSearch] =
     useState("");
@@ -690,6 +694,56 @@ function App() {
       setLoading(false);
     }
   };
+
+  const runAgent = async () => {
+  if (!prompt.trim()) {
+    setRunError("Please enter a prompt.");
+    setRunSuccess("");
+    return;
+  }
+
+  try {
+    setRunLoading(true);
+    setRunError("");
+    setRunSuccess("");
+
+    const response = await fetch(
+      `${API_URL}/api/ai/run`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          prompt: prompt.trim()
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message ||
+          "Failed to run agent."
+      );
+    }
+
+    setPrompt("");
+    setRunSuccess(
+      "Agent run completed successfully."
+    );
+
+    await fetchRuns();
+  } catch (error) {
+    setRunError(
+      error.message ||
+        "Failed to run agent."
+    );
+  } finally {
+    setRunLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchRuns();
@@ -808,6 +862,45 @@ function App() {
             {error}
           </div>
         )}
+
+        <section className="run-agent-section">
+  <div className="section-title">
+    <h2>Run Agent</h2>
+    <p>
+      Send a prompt and monitor the execution.
+    </p>
+  </div>
+
+  <textarea
+    value={prompt}
+    onChange={(event) =>
+      setPrompt(event.target.value)
+    }
+    placeholder="Enter a prompt for the AI agent..."
+  />
+
+  <button
+    type="button"
+    onClick={runAgent}
+    disabled={runLoading}
+  >
+    {runLoading
+      ? "Running..."
+      : "Run Agent"}
+  </button>
+
+  {runError && (
+    <div className="error-banner">
+      {runError}
+    </div>
+  )}
+
+  {runSuccess && (
+    <div className="run-success">
+      {runSuccess}
+    </div>
+  )}
+</section>
 
         <section className="summary-section">
           <SummaryCard

@@ -777,3 +777,52 @@ textarea:focus {
     padding: 16px;
   }
 }
+.run-agent-section {
+  margin-bottom: 32px;
+  padding: 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.run-agent-section textarea {
+  width: 100%;
+  min-height: 120px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.run-agent-section textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.run-agent-section button {
+  margin-top: 12px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.run-agent-section button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.run-success {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #047857;
+}
