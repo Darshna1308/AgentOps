@@ -4,6 +4,10 @@ import remarkGfm from "remark-gfm";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+/* =========================
+   SUMMARY CARD
+========================= */
+
 function SummaryCard({ title, value, subtitle }) {
   return (
     <div className="summary-card">
@@ -22,17 +26,36 @@ function SummaryCard({ title, value, subtitle }) {
   );
 }
 
-function AnalyticsBar({ label, value, max = 100 }) {
+/* =========================
+   ANALYTICS BAR
+========================= */
+
+function AnalyticsBar({
+  label,
+  value,
+  max = 100
+}) {
   const width =
     max > 0
       ? Math.min((value / max) * 100, 100)
+      : 0;
+
+  const percentage =
+    max > 0
+      ? Math.round((value / max) * 100)
       : 0;
 
   return (
     <div className="analytics-bar-row">
       <div className="analytics-bar-label">
         <span>{label}</span>
-        <strong>{value}</strong>
+
+        <strong>
+          {value}{" "}
+          <small>
+            ({percentage}%)
+          </small>
+        </strong>
       </div>
 
       <div className="analytics-bar-track">
@@ -46,6 +69,10 @@ function AnalyticsBar({ label, value, max = 100 }) {
     </div>
   );
 }
+
+/* =========================
+   VISUAL ANALYTICS
+========================= */
 
 function VisualAnalytics({ runs }) {
   const successfulRuns = runs.filter(
@@ -62,7 +89,8 @@ function VisualAnalytics({ runs }) {
       run.toolsUsed.length > 0
   ).length;
 
-  const directRuns = runs.length - toolRuns;
+  const directRuns =
+    runs.length - toolRuns;
 
   const averageLatency =
     runs.length > 0
@@ -211,6 +239,10 @@ function VisualAnalytics({ runs }) {
   );
 }
 
+/* =========================
+   RUN FILTERS
+========================= */
+
 function RunFilters({
   search,
   setSearch,
@@ -271,6 +303,93 @@ function RunFilters({
   );
 }
 
+/* =========================
+   RUN TIMELINE
+========================= */
+
+function RunTimeline({ run }) {
+  const steps = [
+    {
+      number: "01",
+      title: "Prompt",
+      detail: "Request received"
+    },
+    {
+      number: "02",
+      title: "Router",
+      detail:
+        run.agentDecision?.route ||
+        "Route detected"
+    },
+    {
+      number: "03",
+      title: "AI / Tool",
+      detail:
+        run.toolsUsed?.length
+          ? `${run.toolsUsed.length} tool${
+              run.toolsUsed.length > 1
+                ? "s"
+                : ""
+            } executed`
+          : "AI service executed"
+    },
+    {
+      number: "04",
+      title: "Evaluation",
+      detail:
+        run.evaluation?.overall != null
+          ? `Score ${run.evaluation.overall}/10`
+          : "Evaluation completed"
+    },
+    {
+      number: "05",
+      title: "Result",
+      detail:
+        run.status === "success"
+          ? "Execution completed"
+          : "Execution failed"
+    }
+  ];
+
+  return (
+    <div className="run-timeline">
+      {steps.map((step, index) => (
+        <div
+          className={`timeline-step ${
+            run.status === "success"
+              ? "completed"
+              : index === 4
+              ? "failed"
+              : "completed"
+          }`}
+          key={step.number}
+        >
+          <div className="timeline-marker">
+            {run.status === "success"
+              ? "✓"
+              : index === 4
+              ? "!"
+              : step.number}
+          </div>
+
+          <div className="timeline-content">
+            <strong>{step.title}</strong>
+            <span>{step.detail}</span>
+          </div>
+
+          {index < steps.length - 1 && (
+            <div className="timeline-connector" />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* =========================
+   RUN CARD
+========================= */
+
 function RunCard({ run, onFeedback }) {
   const [feedbackRating, setFeedbackRating] =
     useState(
@@ -317,7 +436,8 @@ function RunCard({ run, onFeedback }) {
         }
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -351,6 +471,11 @@ function RunCard({ run, onFeedback }) {
 
   return (
     <div className="run-card">
+
+      {/* =========================
+          RUN HEADER
+      ========================= */}
+
       <div className="run-card-header">
         <div>
           <div className="run-status-row">
@@ -377,281 +502,341 @@ function RunCard({ run, onFeedback }) {
         </div>
       </div>
 
-      <div className="run-metrics">
-        <div>
-          <span>Model</span>
+      {/* =========================
+          COLLAPSIBLE DETAILS
+      ========================= */}
 
-          <strong>
-            {run.model || "N/A"}
-          </strong>
-        </div>
+      <details className="run-details">
+        <summary>
+  <span>
+    View execution details
+  </span>
+</summary>
 
-        <div>
-          <span>Latency</span>
+        {/* =========================
+            EXECUTION TIMELINE
+        ========================= */}
 
-          <strong>
-            {run.latency || 0} ms
-          </strong>
-        </div>
+        <RunTimeline run={run} />
 
-        <div>
-          <span>Tokens</span>
+        {/* =========================
+            RUN METRICS
+        ========================= */}
 
-          <strong>
-            {run.tokens || 0}
-          </strong>
-        </div>
+        <div className="run-metrics">
+          <div>
+            <span>Model</span>
 
-        <div>
-          <span>Cost</span>
+            <strong>
+              {run.model || "N/A"}
+            </strong>
+          </div>
 
-          <strong>
-            ${run.cost || 0}
-          </strong>
-        </div>
+          <div>
+            <span>Latency</span>
 
-        <div>
-          <span>Evaluation</span>
+            <strong>
+              {run.latency || 0} ms
+            </strong>
+          </div>
 
-          <strong>
-            {run.evaluation?.overall ??
-              "N/A"}
-          </strong>
-        </div>
-      </div>
+          <div>
+            <span>Tokens</span>
 
-      {run.agentDecision && (
-        <div className="decision-section">
-          <h4>Agent Decision</h4>
+            <strong>
+              {run.tokens || 0}
+            </strong>
+          </div>
 
-          <div className="decision-grid">
-            <div>
-              <span>Route</span>
+          <div>
+            <span>Cost</span>
 
-              <strong>
-                {run.agentDecision.route}
-              </strong>
-            </div>
+            <strong>
+              ${run.cost || 0}
+            </strong>
+          </div>
 
-            <div>
-              <span>Reason</span>
+          <div>
+            <span>Evaluation</span>
 
-              <strong>
-                {run.agentDecision.reason}
-              </strong>
-            </div>
-
-            <div>
-              <span>
-                Tools Selected
-              </span>
-
-              <strong>
-                {run.agentDecision
-                  .toolsSelected?.length
-                  ? run.agentDecision.toolsSelected.join(
-                      ", "
-                    )
-                  : "None"}
-              </strong>
-            </div>
+            <strong>
+              {run.evaluation?.overall ??
+                "N/A"}
+            </strong>
           </div>
         </div>
-      )}
 
-      {run.toolCalls &&
-        run.toolCalls.length > 0 && (
-          <div className="tool-section">
-            <h4>Tool Calls</h4>
+        {/* =========================
+            AGENT DECISION
+        ========================= */}
 
-            {run.toolCalls.map(
-              (tool, index) => (
-                <div
-                  className="tool-call"
-                  key={index}
-                >
-                  <div className="tool-call-header">
-                    <strong>
-                      {tool.tool}
-                    </strong>
+        {run.agentDecision && (
+          <div className="decision-section">
+            <h4>Agent Decision</h4>
 
-                    <span
-                      className={
-                        tool.status ===
-                        "success"
-                          ? "tool-success"
-                          : "tool-failed"
-                      }
-                    >
-                      {tool.status}
-                    </span>
+            <div className="decision-grid">
+              <div>
+                <span>Route</span>
+
+                <strong>
+                  {run.agentDecision.route}
+                </strong>
+              </div>
+
+              <div>
+                <span>Reason</span>
+
+                <strong>
+                  {run.agentDecision.reason}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Tools Selected
+                </span>
+
+                <strong>
+                  {run.agentDecision
+                    .toolsSelected?.length
+                    ? run.agentDecision.toolsSelected.join(
+                        ", "
+                      )
+                    : "None"}
+                </strong>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =========================
+            TOOL CALLS
+        ========================= */}
+
+        {run.toolCalls &&
+          run.toolCalls.length > 0 && (
+            <div className="tool-section">
+              <h4>Tool Calls</h4>
+
+              {run.toolCalls.map(
+                (tool, index) => (
+                  <div
+                    className="tool-call"
+                    key={index}
+                  >
+                    <div className="tool-call-header">
+                      <strong>
+                        {tool.tool}
+                      </strong>
+
+                      <span
+                        className={
+                          tool.status ===
+                          "success"
+                            ? "tool-success"
+                            : "tool-failed"
+                        }
+                      >
+                        {tool.status}
+                      </span>
+                    </div>
+
+                    <div className="tool-call-details">
+                      <div>
+                        <span>Input</span>
+
+                        <p>
+                          {tool.input}
+                        </p>
+                      </div>
+
+                      <div>
+                        <span>Output</span>
+
+                        <p>
+                          {tool.output}
+                        </p>
+                      </div>
+
+                      <div>
+                        <span>Latency</span>
+
+                        <p>
+                          {tool.latency} ms
+                        </p>
+                      </div>
+                    </div>
                   </div>
+                )
+              )}
+            </div>
+          )}
 
-                  <div className="tool-call-details">
-                    <div>
-                      <span>Input</span>
+        {/* =========================
+            AGENT RESPONSE
+        ========================= */}
 
-                      <p>
-                        {tool.input}
-                      </p>
-                    </div>
+        <div className="response-section">
+          <h4>Agent Response</h4>
 
-                    <div>
-                      <span>Output</span>
-
-                      <p>
-                        {tool.output}
-                      </p>
-                    </div>
-
-                    <div>
-                      <span>Latency</span>
-
-                      <p>
-                        {tool.latency} ms
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )
+          <div className="markdown-content">
+            {run.response ? (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+              >
+                {run.response}
+              </ReactMarkdown>
+            ) : (
+              <span>
+                No response available.
+              </span>
             )}
           </div>
+        </div>
+
+        {/* =========================
+            EVALUATION
+        ========================= */}
+
+        {run.evaluation && (
+          <div className="evaluation-section">
+            <h4>Evaluation</h4>
+
+            <div className="evaluation-grid">
+              <div>
+                <span>Relevance</span>
+
+                <strong>
+                  {run.evaluation.relevance}
+                  /10
+                </strong>
+              </div>
+
+              <div>
+                <span>Quality</span>
+
+                <strong>
+                  {run.evaluation.quality}
+                  /10
+                </strong>
+              </div>
+
+              <div>
+                <span>Overall</span>
+
+                <strong>
+                  {run.evaluation.overall}
+                  /10
+                </strong>
+              </div>
+            </div>
+
+            <p className="evaluation-reason">
+              {run.evaluation.reason}
+            </p>
+          </div>
         )}
 
-      <div className="response-section">
-        <h4>Agent Response</h4>
+        {/* =========================
+            HUMAN FEEDBACK
+        ========================= */}
 
-        <div className="markdown-content">
-          {run.response ? (
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
+        <div className="feedback-section">
+          <h4>Human Feedback</h4>
+
+          <div className="feedback-controls">
+            <button
+              type="button"
+              className={
+                feedbackRating === "good"
+                  ? "feedback-button active"
+                  : "feedback-button"
+              }
+              onClick={() =>
+                setFeedbackRating("good")
+              }
             >
-              {run.response}
-            </ReactMarkdown>
-          ) : (
-            <span>
-              No response available.
-            </span>
-          )}
-        </div>
-      </div>
+              👍 Good
+            </button>
 
-      {run.evaluation && (
-        <div className="evaluation-section">
-          <h4>Evaluation</h4>
-
-          <div className="evaluation-grid">
-            <div>
-              <span>Relevance</span>
-
-              <strong>
-                {run.evaluation.relevance}
-                /10
-              </strong>
-            </div>
-
-            <div>
-              <span>Quality</span>
-
-              <strong>
-                {run.evaluation.quality}
-                /10
-              </strong>
-            </div>
-
-            <div>
-              <span>Overall</span>
-
-              <strong>
-                {run.evaluation.overall}
-                /10
-              </strong>
-            </div>
+            <button
+              type="button"
+              className={
+                feedbackRating ===
+                "needs_improvement"
+                  ? "feedback-button active"
+                  : "feedback-button"
+              }
+              onClick={() =>
+                setFeedbackRating(
+                  "needs_improvement"
+                )
+              }
+            >
+              👎 Needs Improvement
+            </button>
           </div>
 
-          <p className="evaluation-reason">
-            {run.evaluation.reason}
-          </p>
-        </div>
-      )}
-
-      <div className="feedback-section">
-        <h4>Human Feedback</h4>
-
-        <div className="feedback-controls">
-          <button
-            type="button"
-            className={
-              feedbackRating === "good"
-                ? "feedback-button active"
-                : "feedback-button"
-            }
-            onClick={() =>
-              setFeedbackRating("good")
-            }
-          >
-            👍 Good
-          </button>
-
-          <button
-            type="button"
-            className={
-              feedbackRating ===
-              "needs_improvement"
-                ? "feedback-button active"
-                : "feedback-button"
-            }
-            onClick={() =>
-              setFeedbackRating(
-                "needs_improvement"
+          <textarea
+            placeholder="Optional feedback comment..."
+            value={feedbackComment}
+            onChange={(event) =>
+              setFeedbackComment(
+                event.target.value
               )
             }
+          />
+
+          <button
+            type="button"
+            className="submit-feedback-button"
+            onClick={submitFeedback}
+            disabled={feedbackLoading}
           >
-            👎 Needs Improvement
+            {feedbackLoading
+              ? "Saving..."
+              : "Submit Feedback"}
           </button>
+
+          {feedbackMessage && (
+            <div className="feedback-message">
+              {feedbackMessage}
+            </div>
+          )}
         </div>
-
-        <textarea
-          placeholder="Optional feedback comment..."
-          value={feedbackComment}
-          onChange={(event) =>
-            setFeedbackComment(
-              event.target.value
-            )
-          }
-        />
-
-        <button
-          type="button"
-          className="submit-feedback-button"
-          onClick={submitFeedback}
-          disabled={feedbackLoading}
-        >
-          {feedbackLoading
-            ? "Saving..."
-            : "Submit Feedback"}
-        </button>
-
-        {feedbackMessage && (
-          <div className="feedback-message">
-            {feedbackMessage}
-          </div>
-        )}
-      </div>
+      </details>
     </div>
   );
 }
+
+/* =========================
+   APP
+========================= */
 
 function App() {
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] =
     useState(true);
   const [error, setError] = useState("");
-    const [prompt, setPrompt] = useState("");
-  const [runLoading, setRunLoading] = useState(false);
-  const [runError, setRunError] = useState("");
-  const [runSuccess, setRunSuccess] = useState("");
 
+  /* Run Agent state */
+  const [prompt, setPrompt] =
+    useState("");
+
+  const [runLoading, setRunLoading] =
+    useState(false);
+
+  const [runError, setRunError] =
+    useState("");
+
+  const [runSuccess, setRunSuccess] =
+    useState("");
+
+  /* Interactive execution flow */
+  const [activeFlowStep, setActiveFlowStep] =
+    useState(null);
+
+  /* Filters */
   const [search, setSearch] =
     useState("");
 
@@ -660,6 +845,10 @@ function App() {
 
   const [routeFilter, setRouteFilter] =
     useState("all");
+
+  /* =========================
+     FETCH RUNS
+  ========================= */
 
   const fetchRuns = async () => {
     try {
@@ -695,59 +884,106 @@ function App() {
     }
   };
 
+  /* =========================
+     RUN AGENT
+  ========================= */
+
   const runAgent = async () => {
-  if (!prompt.trim()) {
-    setRunError("Please enter a prompt.");
-    setRunSuccess("");
-    return;
-  }
-
-  try {
-    setRunLoading(true);
-    setRunError("");
-    setRunSuccess("");
-
-    const response = await fetch(
-      `${API_URL}/api/ai/run`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          prompt: prompt.trim()
-        })
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.message ||
-          "Failed to run agent."
+    if (!prompt.trim()) {
+      setRunError(
+        "Please enter a prompt."
       );
+
+      setRunSuccess("");
+
+      return;
     }
 
-    setPrompt("");
-    setRunSuccess(
-      "Agent run completed successfully."
-    );
+    try {
+      setRunLoading(true);
+      setRunError("");
+      setRunSuccess("");
 
-    await fetchRuns();
-  } catch (error) {
-    setRunError(
-      error.message ||
-        "Failed to run agent."
-    );
-  } finally {
-    setRunLoading(false);
-  }
-};
+      // Start execution flow
+      setActiveFlowStep(0);
+
+      // Move to Router
+      const routerTimer = setTimeout(() => {
+        setActiveFlowStep(1);
+      }, 500);
+
+      // Move to AI / Tool
+      const executionTimer = setTimeout(() => {
+        setActiveFlowStep(2);
+      }, 1000);
+
+      const response = await fetch(
+        `${API_URL}/api/ai/run`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+            prompt: prompt.trim()
+          })
+        }
+      );
+
+      const data =
+        await response.json();
+
+      clearTimeout(routerTimer);
+      clearTimeout(executionTimer);
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Failed to run agent."
+        );
+      }
+
+      // Evaluation stage
+      setActiveFlowStep(3);
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, 500)
+      );
+
+      // Result stage
+      setActiveFlowStep(4);
+
+      setPrompt("");
+
+      setRunSuccess(
+        "Agent run completed successfully."
+      );
+
+      await fetchRuns();
+    } catch (error) {
+      setRunError(
+        error.message ||
+          "Failed to run agent."
+      );
+    } finally {
+      setRunLoading(false);
+    }
+  };
+
+  /* =========================
+     INITIAL LOAD
+  ========================= */
 
   useEffect(() => {
     fetchRuns();
   }, []);
+
+  /* =========================
+     FILTERED RUNS
+  ========================= */
 
   const filteredRuns = useMemo(() => {
     return runs.filter((run) => {
@@ -785,6 +1021,10 @@ function App() {
     routeFilter
   ]);
 
+  /* =========================
+     SUMMARY METRICS
+  ========================= */
+
   const successfulRuns =
     runs.filter(
       (run) =>
@@ -804,7 +1044,8 @@ function App() {
       ? Math.round(
           runs.reduce(
             (sum, run) =>
-              sum + (run.latency || 0),
+              sum +
+              (run.latency || 0),
             0
           ) / totalRuns
         )
@@ -835,6 +1076,10 @@ function App() {
     0
   );
 
+  /* =========================
+     RENDER
+  ========================= */
+
   return (
     <div className="app">
       <header className="dashboard-header">
@@ -863,44 +1108,164 @@ function App() {
           </div>
         )}
 
+        {/* =========================
+            RUN AGENT
+        ========================= */}
+
         <section className="run-agent-section">
-  <div className="section-title">
-    <h2>Run Agent</h2>
-    <p>
-      Send a prompt and monitor the execution.
-    </p>
-  </div>
+          <div className="run-agent-header">
+            <div>
+              <span className="run-agent-eyebrow">
+                EXECUTION CONTROL
+              </span>
 
-  <textarea
-    value={prompt}
-    onChange={(event) =>
-      setPrompt(event.target.value)
-    }
-    placeholder="Enter a prompt for the AI agent..."
-  />
+              <h2>Run Agent</h2>
 
-  <button
-    type="button"
-    onClick={runAgent}
-    disabled={runLoading}
-  >
-    {runLoading
-      ? "Running..."
-      : "Run Agent"}
-  </button>
+              <p>
+                Send a prompt and monitor
+                the complete agent
+                execution.
+              </p>
+            </div>
 
-  {runError && (
-    <div className="error-banner">
-      {runError}
-    </div>
-  )}
+            <div className="run-agent-status">
+              <span className="status-dot"></span>
+              System Ready
+            </div>
+          </div>
 
-  {runSuccess && (
-    <div className="run-success">
-      {runSuccess}
-    </div>
-  )}
-</section>
+          <div className="run-agent-input-area">
+            <textarea
+              value={prompt}
+              onChange={(event) =>
+                setPrompt(
+                  event.target.value
+                )
+              }
+              placeholder="What would you like the agent to do?"
+            />
+
+            <button
+              type="button"
+              onClick={runAgent}
+              disabled={runLoading}
+              className={`run-agent-button ${
+                runLoading
+                  ? "is-running"
+                  : ""
+              }`}
+            >
+              {runLoading ? (
+                <>
+                  <span className="button-spinner"></span>
+                  Processing Agent...
+                </>
+              ) : (
+                "Run Agent →"
+              )}
+            </button>
+          </div>
+
+          {/* =========================
+              EXECUTION FLOW
+          ========================= */}
+
+          <div className="execution-flow">
+            <div
+              className={`flow-step ${
+                activeFlowStep === 0
+                  ? "active"
+                  : ""
+              }`}
+            >
+              <span className="flow-number">
+                01
+              </span>
+
+              <span>Prompt</span>
+            </div>
+
+            <span className="flow-line"></span>
+
+            <div
+              className={`flow-step ${
+                activeFlowStep === 1
+                  ? "active"
+                  : ""
+              }`}
+            >
+              <span className="flow-number">
+                02
+              </span>
+
+              <span>Router</span>
+            </div>
+
+            <span className="flow-line"></span>
+
+            <div
+              className={`flow-step ${
+                activeFlowStep === 2
+                  ? "active"
+                  : ""
+              }`}
+            >
+              <span className="flow-number">
+                03
+              </span>
+
+              <span>AI / Tool</span>
+            </div>
+
+            <span className="flow-line"></span>
+
+            <div
+              className={`flow-step ${
+                activeFlowStep === 3
+                  ? "active"
+                  : ""
+              }`}
+            >
+              <span className="flow-number">
+                04
+              </span>
+
+              <span>Evaluation</span>
+            </div>
+
+            <span className="flow-line"></span>
+
+            <div
+              className={`flow-step ${
+                activeFlowStep === 4
+                  ? "active"
+                  : ""
+              }`}
+            >
+              <span className="flow-number">
+                05
+              </span>
+
+              <span>Result</span>
+            </div>
+          </div>
+
+          {runError && (
+            <div className="error-banner">
+              {runError}
+            </div>
+          )}
+
+          {runSuccess && (
+            <div className="run-success">
+              {runSuccess}
+            </div>
+          )}
+        </section>
+
+        {/* =========================
+            SUMMARY
+        ========================= */}
 
         <section className="summary-section">
           <SummaryCard
@@ -941,12 +1306,24 @@ function App() {
 
           <SummaryCard
             title="Total Cost"
-            value={`$${totalCost.toFixed(6)}`}
+            value={`$${totalCost.toFixed(
+              6
+            )}`}
             subtitle="Estimated AI cost"
           />
         </section>
 
-        <VisualAnalytics runs={runs} />
+        {/* =========================
+            VISUAL ANALYTICS
+        ========================= */}
+
+        <VisualAnalytics
+          runs={runs}
+        />
+
+        {/* =========================
+            RUNS
+        ========================= */}
 
         <section className="runs-section">
           <div className="section-title">
@@ -962,7 +1339,9 @@ function App() {
           <RunFilters
             search={search}
             setSearch={setSearch}
-            statusFilter={statusFilter}
+            statusFilter={
+              statusFilter
+            }
             setStatusFilter={
               setStatusFilter
             }
@@ -976,7 +1355,8 @@ function App() {
             <div className="empty-state">
               Loading runs...
             </div>
-          ) : filteredRuns.length === 0 ? (
+          ) : filteredRuns.length ===
+            0 ? (
             <div className="empty-state">
               No runs match the
               current filters.
