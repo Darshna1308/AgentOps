@@ -1,6 +1,10 @@
 const express = require("express");
 const connectDB = require("./db");
 const AgentRun = require("./agentRun");
+const User = require("./user");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const authMiddleware = require("./authMiddleware");
 const axios = require("axios");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
@@ -26,12 +30,12 @@ app.use(helmet());
 app.use((req, res, next) => {
   res.header(
     "Access-Control-Allow-Origin",
-    "http://localhost:5173"
+     "https://agentops-self.vercel.app"
   );
 
   res.header(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept"
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
 
   res.header(
@@ -69,6 +73,56 @@ if (!AI_SERVICE_URL) {
     "AI_SERVICE_URL is not configured"
   );
 }
+console.log("AUTH LOGIN ROUTE REGISTERED");
+app.post("/api/auth/login", async (req, res, next) => {
+  console.log("LOGIN REQUEST RECEIVED");
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({
+        message: "Username and password are required."
+      });
+    }
+
+    const user = await User.findOne({ username });
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Invalid username or password."
+      });
+    }
+
+    const passwordMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        message: "Invalid username or password."
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        username: user.username
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1d"
+      }
+    );
+
+    res.json({
+      message: "Login successful.",
+      token
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 /* =========================
    DATABASE
@@ -636,6 +690,7 @@ function evaluateRun({
 
 app.post(
   "/api/ai/run",
+  authMiddleware,
   aiRateLimiter,
   async (req, res, next) => {
 
@@ -1143,6 +1198,7 @@ Explain the analysis clearly to the user.
 
 app.get(
   "/api/runs",
+  authMiddleware,
   async (req, res, next) => {
 
     try {
@@ -1169,6 +1225,7 @@ app.get(
 
 app.post(
   "/api/runs/:id/feedback",
+  authMiddleware,
   async (req, res, next) => {
 
     try {
