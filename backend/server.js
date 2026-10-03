@@ -690,7 +690,6 @@ function evaluateRun({
 
 app.post(
   "/api/ai/run",
-  authMiddleware,
   aiRateLimiter,
   async (req, res, next) => {
 
@@ -1198,7 +1197,6 @@ Explain the analysis clearly to the user.
 
 app.get(
   "/api/runs",
-  authMiddleware,
   async (req, res, next) => {
 
     try {
@@ -1225,7 +1223,6 @@ app.get(
 
 app.post(
   "/api/runs/:id/feedback",
-  authMiddleware,
   async (req, res, next) => {
 
     try {
