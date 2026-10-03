@@ -4,1376 +4,571 @@ import remarkGfm from "remark-gfm";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-/* =========================
-   SUMMARY CARD
-========================= */
+const STAGES = [
+  { key: "prompt", label: "Prompt", sub: "Received" },
+  { key: "agent", label: "Agent", sub: "Assembly" },
+  { key: "tool", label: "Tool", sub: "Execution" },
+  { key: "inspect", label: "Inspection", sub: "Scan" },
+  { key: "eval", label: "Evaluation", sub: "Scoring" },
+  { key: "result", label: "Result", sub: "Build" }
+];
 
-function SummaryCard({ title, value, subtitle }) {
-  return (
-    <div className="summary-card">
-      <div className="summary-card-title">
-        {title}
-      </div>
+const OK = ["success", "completed", "passed"];
+const BAD = ["failed", "error", "rejected"];
 
-      <div className="summary-card-value">
-        {value}
-      </div>
+const statusOf = (run) =>
+  String(run?.status || run?.result?.status || "unknown").toLowerCase();
 
-      <div className="summary-card-subtitle">
-        {subtitle}
-      </div>
-    </div>
-  );
-}
+const get = (run, key, fallback = "—") =>
+  run?.[key] || run?.result?.[key] || fallback;
 
-/* =========================
-   ANALYTICS BAR
-========================= */
+const formatDate = (date) => {
+  if (!date) return "Unknown";
+  try {
+    return new Date(date).toLocaleString();
+  } catch {
+    return "Unknown";
+  }
+};
 
-function AnalyticsBar({
-  label,
-  value,
-  max = 100
-}) {
-  const width =
-    max > 0
-      ? Math.min((value / max) * 100, 100)
-      : 0;
+const formatLatency = (v) =>
+  v === undefined || v === null ? "—" : `${Math.round(Number(v))} ms`;
+const formatTokens = (v) =>
+  v === undefined || v === null ? "—" : Number(v).toLocaleString();
+const formatCost = (v) =>
+  v === undefined || v === null ? "—" : `$${Number(v).toFixed(6)}`;
 
-  const percentage =
-    max > 0
-      ? Math.round((value / max) * 100)
-      : 0;
+function Pipeline({ phase, outcome, running }) {
+  const xs = STAGES.map((_, i) => 80 + i * 160);
+  const stateOf = (i) =>
+    phase < 0 ? "idle" : i < phase ? "done" : i === phase ? "active" : "idle";
 
   return (
-    <div className="analytics-bar-row">
-      <div className="analytics-bar-label">
-        <span>{label}</span>
+    <div className="pipe-wrap">
+      <svg
+        className="pipeline"
+        viewBox="0 0 960 190"
+        role="img"
+        aria-label="Agent pipeline: prompt, agent, tool, inspection, evaluation, result"
+      >
+        <defs>
+          <linearGradient id="scan" x1="0" x2="1">
+            <stop offset="0" stopColor="#52c7f2" stopOpacity="0" />
+            <stop offset="1" stopColor="#52c7f2" stopOpacity="0.45" />
+          </linearGradient>
+          <pattern id="ticks" width="20" height="10" patternUnits="userSpaceOnUse">
+            <path d="M0 0V10M10 0V5" stroke="#363c42" strokeWidth="1" />
+          </pattern>
+        </defs>
 
-        <strong>
-          {value}{" "}
-          <small>
-            ({percentage}%)
-          </small>
-        </strong>
-      </div>
+        <rect x="0" y="168" width="960" height="10" fill="url(#ticks)" />
+        <text className="node-sub" x="0" y="188">0 mm</text>
+        <text className="node-sub" x="960" y="188" textAnchor="end">
+          PIPELINE 6 STAGES
+        </text>
 
-      <div className="analytics-bar-track">
-        <div
-          className="analytics-bar-fill"
-          style={{
-            width: `${width}%`
-          }}
-        />
-      </div>
-    </div>
-  );
-}
+        <g className={`neural ${running && (phase === 1 || phase === 2) ? "on" : ""}`}>
+          {[[200, 16], [240, 8], [280, 16], [240, 30]].map(([x, y]) => (
+            <g key={`${x}-${y}`}>
+              <line x1="240" y1="49" x2={x} y2={y} />
+              <circle cx={x} cy={y} r="3" />
+            </g>
+          ))}
+        </g>
 
-/* =========================
-   VISUAL ANALYTICS
-========================= */
-
-function VisualAnalytics({ runs }) {
-  const successfulRuns = runs.filter(
-    (run) => run.status === "success"
-  ).length;
-
-  const failedRuns = runs.filter(
-    (run) => run.status === "failed"
-  ).length;
-
-  const toolRuns = runs.filter(
-    (run) =>
-      run.toolsUsed &&
-      run.toolsUsed.length > 0
-  ).length;
-
-  const directRuns =
-    runs.length - toolRuns;
-
-  const averageLatency =
-    runs.length > 0
-      ? Math.round(
-          runs.reduce(
-            (sum, run) =>
-              sum + (run.latency || 0),
-            0
-          ) / runs.length
-        )
-      : 0;
-
-  const averageEvaluation =
-    runs.length > 0
-      ? (
-          runs.reduce(
-            (sum, run) =>
-              sum +
-              (run.evaluation?.overall || 0),
-            0
-          ) / runs.length
-        ).toFixed(1)
-      : "0.0";
-
-  const maxLatency = Math.max(
-    ...runs.map(
-      (run) => run.latency || 0
-    ),
-    1
-  );
-
-  return (
-    <section className="analytics-section">
-      <div className="section-title">
-        <h2>Visual Analytics</h2>
-
-        <p>
-          Monitoring agent performance,
-          routing and reliability
-        </p>
-      </div>
-
-      <div className="analytics-grid">
-        <div className="analytics-panel">
-          <h3>Run Status</h3>
-
-          <AnalyticsBar
-            label="Successful"
-            value={successfulRuns}
-            max={Math.max(runs.length, 1)}
-          />
-
-          <AnalyticsBar
-            label="Failed"
-            value={failedRuns}
-            max={Math.max(runs.length, 1)}
-          />
-        </div>
-
-        <div className="analytics-panel">
-          <h3>Agent Routing</h3>
-
-          <AnalyticsBar
-            label="Direct AI"
-            value={directRuns}
-            max={Math.max(runs.length, 1)}
-          />
-
-          <AnalyticsBar
-            label="Tool Assisted"
-            value={toolRuns}
-            max={Math.max(runs.length, 1)}
-          />
-        </div>
-
-        <div className="analytics-panel">
-          <h3>Performance</h3>
-
-          <div className="analytics-stat">
-            <span>Average Latency</span>
-
-            <strong>
-              {averageLatency} ms
-            </strong>
-          </div>
-
-          <div className="analytics-stat">
-            <span>Average Evaluation</span>
-
-            <strong>
-              {averageEvaluation}/10
-            </strong>
-          </div>
-        </div>
-      </div>
-
-      <div className="analytics-panel latency-panel">
-        <h3>Latency by Run</h3>
-
-        <div className="latency-chart">
-          {runs.length === 0 ? (
-            <div className="empty-state">
-              No latency data yet.
-            </div>
-          ) : (
-            runs
-              .slice(0, 20)
-              .reverse()
-              .map((run, index) => {
-                const latency =
-                  run.latency || 0;
-
-                const height = Math.max(
-                  (latency / maxLatency) * 100,
-                  4
-                );
-
-                return (
-                  <div
-                    className="latency-column"
-                    key={
-                      run._id || index
-                    }
-                  >
-                    <div className="latency-value">
-                      {latency}
-                    </div>
-
-                    <div
-                      className="latency-bar"
-                      style={{
-                        height: `${height}%`
-                      }}
+        {STAGES.slice(0, -1).map((_, i) => {
+          const lit = phase > i;
+          const flow = running && phase === i + 1;
+          const x1 = xs[i] + 56;
+          const x2 = xs[i + 1] - 56;
+          return (
+            <g key={i}>
+              <line
+                className={`link ${lit ? "lit" : ""} ${flow ? "flow" : ""}`}
+                x1={x1}
+                y1="85"
+                x2={x2}
+                y2="85"
+              />
+              {flow &&
+                [0, 0.45].map((begin) => (
+                  <circle key={begin} className="particle" r="3.5">
+                    <animateMotion
+                      dur="0.9s"
+                      begin={`${begin}s`}
+                      repeatCount="indefinite"
+                      path={`M${x1} 85L${x2} 85`}
                     />
+                  </circle>
+                ))}
+            </g>
+          );
+        })}
 
-                    <div className="latency-index">
-                      #{index + 1}
-                    </div>
-                  </div>
-                );
-              })
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
+        {STAGES.map((stage, i) => {
+          const st = stateOf(i);
+          const isResult = i === STAGES.length - 1;
+          const resultClass = isResult && st === "done" ? outcome || "" : "";
+          const label =
+            isResult && st === "done"
+              ? outcome === "pass"
+                ? "PASS"
+                : outcome === "fail"
+                  ? "FAIL"
+                  : "LOGGED"
+              : stage.label;
+          return (
+            <g
+              key={stage.key}
+              className={`node ${st} ${resultClass}`}
+              transform={`translate(${xs[i] - 56} 49)`}
+            >
+              <rect className="node-body" width="112" height="72" rx="2" />
+              <path
+                className="node-brk"
+                d="M0 10V0h10M102 0h10v10M112 62v10h-10M10 72H0V62"
+              />
+              <text className="node-idx" x="10" y="20">0{i + 1}</text>
+              <circle className="node-led" cx="100" cy="16" r="3.5" />
+              <text className="node-label" x="56" y="46" textAnchor="middle">
+                {label}
+              </text>
+              <text className="node-sub" x="56" y="61" textAnchor="middle">
+                {stage.sub}
+              </text>
+            </g>
+          );
+        })}
 
-/* =========================
-   RUN FILTERS
-========================= */
-
-function RunFilters({
-  search,
-  setSearch,
-  statusFilter,
-  setStatusFilter,
-  routeFilter,
-  setRouteFilter
-}) {
-  return (
-    <div className="run-filters">
-      <input
-        type="text"
-        placeholder="Search prompts or responses..."
-        value={search}
-        onChange={(event) =>
-          setSearch(event.target.value)
-        }
-      />
-
-      <select
-        value={statusFilter}
-        onChange={(event) =>
-          setStatusFilter(event.target.value)
-        }
-      >
-        <option value="all">
-          All Status
-        </option>
-
-        <option value="success">
-          Success
-        </option>
-
-        <option value="failed">
-          Failed
-        </option>
-      </select>
-
-      <select
-        value={routeFilter}
-        onChange={(event) =>
-          setRouteFilter(event.target.value)
-        }
-      >
-        <option value="all">
-          All Routes
-        </option>
-
-        <option value="direct-ai">
-          Direct AI
-        </option>
-
-        <option value="tool">
-          Tool
-        </option>
-      </select>
+        {running && phase >= 3 && (
+          <rect className="scanner" x="0" y="30" width="60" height="110" />
+        )}
+      </svg>
     </div>
   );
 }
 
-/* =========================
-   RUN TIMELINE
-========================= */
-
-function RunTimeline({ run }) {
-  const steps = [
-    {
-      number: "01",
-      title: "Prompt",
-      detail: "Request received"
-    },
-    {
-      number: "02",
-      title: "Router",
-      detail:
-        run.agentDecision?.route ||
-        "Route detected"
-    },
-    {
-      number: "03",
-      title: "AI / Tool",
-      detail:
-        run.toolsUsed?.length
-          ? `${run.toolsUsed.length} tool${
-              run.toolsUsed.length > 1
-                ? "s"
-                : ""
-            } executed`
-          : "AI service executed"
-    },
-    {
-      number: "04",
-      title: "Evaluation",
-      detail:
-        run.evaluation?.overall != null
-          ? `Score ${run.evaluation.overall}/10`
-          : "Evaluation completed"
-    },
-    {
-      number: "05",
-      title: "Result",
-      detail:
-        run.status === "success"
-          ? "Execution completed"
-          : "Execution failed"
-    }
+function Trace({ run, phase, outcome }) {
+  const details = [
+    run ? String(run.prompt || "—").slice(0, 70) : "Awaiting work order",
+    run ? `Model: ${run.model || "—"}` : "Agent not assembled",
+    run ? `Tool: ${get(run, "tool")}` : "No tool called",
+    run ? `Decision: ${get(run, "decision")}` : "Inspection idle",
+    run
+      ? run.evaluation?.score !== undefined || run.result?.evaluation?.score !== undefined
+        ? `Score: ${(run.evaluation || run.result.evaluation).score}/100`
+        : "No score returned"
+      : "Evaluation idle",
+    run ? `Status: ${statusOf(run)}` : "No result yet"
   ];
 
   return (
-    <div className="run-timeline">
-      {steps.map((step, index) => (
-        <div
-          className={`timeline-step ${
-            run.status === "success"
-              ? "completed"
-              : index === 4
-              ? "failed"
-              : "completed"
-          }`}
-          key={step.number}
-        >
-          <div className="timeline-marker">
-            {run.status === "success"
-              ? "✓"
-              : index === 4
-              ? "!"
-              : step.number}
-          </div>
-
-          <div className="timeline-content">
-            <strong>{step.title}</strong>
-            <span>{step.detail}</span>
-          </div>
-
-          {index < steps.length - 1 && (
-            <div className="timeline-connector" />
-          )}
-        </div>
-      ))}
+    <div className="panel trace">
+      <div className="label">Execution trace</div>
+      <ol>
+        {STAGES.map((s, i) => {
+          const st = phase < 0 ? "idle" : i < phase ? "done" : i === phase ? "active" : "idle";
+          const res = i === 5 && st === "done" ? outcome || "" : "";
+          return (
+            <li key={s.key} className={`${st} ${res}`}>
+              <span className="dot">{st === "done" ? "OK" : `0${i + 1}`}</span>
+              <div>
+                <strong>{s.label} {s.sub.toLowerCase()}</strong>
+                <small>{st === "done" || (st === "idle" && !run) ? details[i] : st === "active" ? "In progress…" : "Waiting"}</small>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }
 
-/* =========================
-   RUN CARD
-========================= */
-
 function RunCard({ run, onFeedback }) {
-  const [feedbackRating, setFeedbackRating] =
-    useState(
-      run.humanFeedback?.rating || ""
-    );
-
-  const [feedbackComment, setFeedbackComment] =
-    useState(
-      run.humanFeedback?.comment || ""
-    );
-
-  const [feedbackLoading, setFeedbackLoading] =
-    useState(false);
-
-  const [feedbackMessage, setFeedbackMessage] =
-    useState("");
+  const [rating, setRating] = useState(run.feedback?.rating || "");
+  const [comment, setComment] = useState(run.feedback?.comment || "");
+  const [saving, setSaving] = useState(false);
 
   const submitFeedback = async () => {
-    if (!feedbackRating) {
-      setFeedbackMessage(
-        "Please select a rating."
-      );
-
-      return;
-    }
-
+    if (!rating) return;
     try {
-      setFeedbackLoading(true);
-      setFeedbackMessage("");
-
-      const response = await fetch(
-        `${API_URL}/api/runs/${run._id}/feedback`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-            rating: feedbackRating,
-            comment: feedbackComment
-          })
-        }
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message ||
-            "Failed to save feedback"
-        );
-      }
-
-      setFeedbackMessage(
-        "Feedback saved successfully."
-      );
-
-      if (onFeedback) {
-        onFeedback();
-      }
+      setSaving(true);
+      const response = await fetch(`${API_URL}/api/runs/${run._id}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating, comment })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to save feedback.");
+      onFeedback?.(data.run || data);
     } catch (error) {
-      setFeedbackMessage(
-        error.message ||
-          "Failed to save feedback."
-      );
+      alert(error.message || "Unable to submit feedback.");
     } finally {
-      setFeedbackLoading(false);
+      setSaving(false);
     }
   };
 
-  const createdAt = run.createdAt
-    ? new Date(
-        run.createdAt
-      ).toLocaleString()
-    : "Unknown";
+  const status = statusOf(run);
+  const responseText = run.response || run.result?.response || "";
+  const evaluation = run.evaluation || run.result?.evaluation || null;
 
   return (
-    <div className="run-card">
-
-      {/* =========================
-          RUN HEADER
-      ========================= */}
-
-      <div className="run-card-header">
+    <article className="run-card">
+      <div className="rc-head">
         <div>
-          <div className="run-status-row">
-            <span
-              className={`status-badge ${
-                run.status === "success"
-                  ? "status-success"
-                  : "status-failed"
-              }`}
-            >
-              {run.status}
-            </span>
-
-            <span className="run-date">
-              {createdAt}
-            </span>
+          <div className="rc-title">{run.prompt || "Untitled run"}</div>
+          <div className="rc-time">
+            {formatDate(run.createdAt || run.timestamp || run.created_at)}
           </div>
-
-          <h3>{run.prompt}</h3>
         </div>
+        <span className={`badge status-${status}`}>{status}</span>
+      </div>
 
-        <div className="run-id">
-          {run._id}
+      <div className="spec">
+        <div><span>Latency</span><strong>{formatLatency(run.latency_ms ?? run.latencyMs)}</strong></div>
+        <div><span>Tokens</span><strong>{formatTokens(run.tokens ?? run.totalTokens)}</strong></div>
+        <div><span>Est. cost</span><strong>{formatCost(run.cost ?? run.estimatedCost)}</strong></div>
+        <div><span>Model</span><strong>{run.model || "—"}</strong></div>
+        <div><span>Tool</span><strong>{get(run, "tool")}</strong></div>
+        <div><span>Decision</span><strong>{get(run, "decision")}</strong></div>
+        <div>
+          <span>Eval score</span>
+          <strong>{evaluation?.score !== undefined ? `${evaluation.score}/100` : "—"}</strong>
         </div>
       </div>
 
-      {/* =========================
-          COLLAPSIBLE DETAILS
-      ========================= */}
-
-      <details className="run-details">
-        <summary>
-  <span>
-    View execution details
-  </span>
-</summary>
-
-        {/* =========================
-            EXECUTION TIMELINE
-        ========================= */}
-
-        <RunTimeline run={run} />
-
-        {/* =========================
-            RUN METRICS
-        ========================= */}
-
-        <div className="run-metrics">
-          <div>
-            <span>Model</span>
-
-            <strong>
-              {run.model || "N/A"}
-            </strong>
-          </div>
-
-          <div>
-            <span>Latency</span>
-
-            <strong>
-              {run.latency || 0} ms
-            </strong>
-          </div>
-
-          <div>
-            <span>Tokens</span>
-
-            <strong>
-              {run.tokens || 0}
-            </strong>
-          </div>
-
-          <div>
-            <span>Cost</span>
-
-            <strong>
-              ${run.cost || 0}
-            </strong>
-          </div>
-
-          <div>
-            <span>Evaluation</span>
-
-            <strong>
-              {run.evaluation?.overall ??
-                "N/A"}
-            </strong>
-          </div>
-        </div>
-
-        {/* =========================
-            AGENT DECISION
-        ========================= */}
-
-        {run.agentDecision && (
-          <div className="decision-section">
-            <h4>Agent Decision</h4>
-
-            <div className="decision-grid">
-              <div>
-                <span>Route</span>
-
-                <strong>
-                  {run.agentDecision.route}
-                </strong>
-              </div>
-
-              <div>
-                <span>Reason</span>
-
-                <strong>
-                  {run.agentDecision.reason}
-                </strong>
-              </div>
-
-              <div>
-                <span>
-                  Tools Selected
-                </span>
-
-                <strong>
-                  {run.agentDecision
-                    .toolsSelected?.length
-                    ? run.agentDecision.toolsSelected.join(
-                        ", "
-                      )
-                    : "None"}
-                </strong>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* =========================
-            TOOL CALLS
-        ========================= */}
-
-        {run.toolCalls &&
-          run.toolCalls.length > 0 && (
-            <div className="tool-section">
-              <h4>Tool Calls</h4>
-
-              {run.toolCalls.map(
-                (tool, index) => (
-                  <div
-                    className="tool-call"
-                    key={index}
-                  >
-                    <div className="tool-call-header">
-                      <strong>
-                        {tool.tool}
-                      </strong>
-
-                      <span
-                        className={
-                          tool.status ===
-                          "success"
-                            ? "tool-success"
-                            : "tool-failed"
-                        }
-                      >
-                        {tool.status}
-                      </span>
-                    </div>
-
-                    <div className="tool-call-details">
-                      <div>
-                        <span>Input</span>
-
-                        <p>
-                          {tool.input}
-                        </p>
-                      </div>
-
-                      <div>
-                        <span>Output</span>
-
-                        <p>
-                          {tool.output}
-                        </p>
-                      </div>
-
-                      <div>
-                        <span>Latency</span>
-
-                        <p>
-                          {tool.latency} ms
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )
-              )}
-            </div>
-          )}
-
-        {/* =========================
-            AGENT RESPONSE
-        ========================= */}
-
-        <div className="response-section">
-          <h4>Agent Response</h4>
-
+      {responseText && (
+        <>
+          <div className="label">Response</div>
           <div className="markdown-content">
-            {run.response ? (
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-              >
-                {run.response}
-              </ReactMarkdown>
-            ) : (
-              <span>
-                No response available.
-              </span>
-            )}
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{responseText}</ReactMarkdown>
           </div>
-        </div>
+        </>
+      )}
 
-        {/* =========================
-            EVALUATION
-        ========================= */}
-
-        {run.evaluation && (
-          <div className="evaluation-section">
-            <h4>Evaluation</h4>
-
-            <div className="evaluation-grid">
-              <div>
-                <span>Relevance</span>
-
-                <strong>
-                  {run.evaluation.relevance}
-                  /10
-                </strong>
-              </div>
-
-              <div>
-                <span>Quality</span>
-
-                <strong>
-                  {run.evaluation.quality}
-                  /10
-                </strong>
-              </div>
-
-              <div>
-                <span>Overall</span>
-
-                <strong>
-                  {run.evaluation.overall}
-                  /10
-                </strong>
-              </div>
-            </div>
-
-            <p className="evaluation-reason">
-              {run.evaluation.reason}
-            </p>
+      {evaluation && (evaluation.reason || evaluation.feedback) && (
+        <>
+          <div className="label">Inspection notes</div>
+          <div className="notes">
+            {evaluation.reason && <p>{evaluation.reason}</p>}
+            {evaluation.feedback && <p>{evaluation.feedback}</p>}
           </div>
-        )}
+        </>
+      )}
 
-        {/* =========================
-            HUMAN FEEDBACK
-        ========================= */}
-
-        <div className="feedback-section">
-          <h4>Human Feedback</h4>
-
-          <div className="feedback-controls">
-            <button
-              type="button"
-              className={
-                feedbackRating === "good"
-                  ? "feedback-button active"
-                  : "feedback-button"
-              }
-              onClick={() =>
-                setFeedbackRating("good")
-              }
-            >
-              👍 Good
-            </button>
-
-            <button
-              type="button"
-              className={
-                feedbackRating ===
-                "needs_improvement"
-                  ? "feedback-button active"
-                  : "feedback-button"
-              }
-              onClick={() =>
-                setFeedbackRating(
-                  "needs_improvement"
-                )
-              }
-            >
-              👎 Needs Improvement
-            </button>
-          </div>
-
-          <textarea
-            placeholder="Optional feedback comment..."
-            value={feedbackComment}
-            onChange={(event) =>
-              setFeedbackComment(
-                event.target.value
-              )
-            }
-          />
-
-          <button
-            type="button"
-            className="submit-feedback-button"
-            onClick={submitFeedback}
-            disabled={feedbackLoading}
-          >
-            {feedbackLoading
-              ? "Saving..."
-              : "Submit Feedback"}
-          </button>
-
-          {feedbackMessage && (
-            <div className="feedback-message">
-              {feedbackMessage}
-            </div>
-          )}
-        </div>
-      </details>
-    </div>
+      <div className="label">Human feedback</div>
+      <div className="feedback-controls">
+        <select value={rating} onChange={(e) => setRating(e.target.value)}>
+          <option value="">Select rating</option>
+          <option value="1">1 — Poor</option>
+          <option value="2">2 — Needs improvement</option>
+          <option value="3">3 — Average</option>
+          <option value="4">4 — Good</option>
+          <option value="5">5 — Excellent</option>
+        </select>
+        <input
+          type="text"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Optional feedback"
+        />
+        <button type="button" className="btn-ghost" onClick={submitFeedback} disabled={saving || !rating}>
+          {saving ? "Saving..." : "Submit"}
+        </button>
+      </div>
+    </article>
   );
 }
 
-/* =========================
-   APP
-========================= */
-
 function App() {
   const [runs, setRuns] = useState([]);
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  /* Run Agent state */
-  const [prompt, setPrompt] =
-    useState("");
-
-  const [runLoading, setRunLoading] =
-    useState(false);
-
-  const [runError, setRunError] =
-    useState("");
-
-  const [runSuccess, setRunSuccess] =
-    useState("");
-
-  /* Interactive execution flow */
-  const [activeFlowStep, setActiveFlowStep] =
-    useState(null);
-
-  /* Filters */
-  const [search, setSearch] =
-    useState("");
-
-  const [statusFilter, setStatusFilter] =
-    useState("all");
-
-  const [routeFilter, setRouteFilter] =
-    useState("all");
-
-  /* =========================
-     FETCH RUNS
-  ========================= */
+  const [prompt, setPrompt] = useState("");
+  const [running, setRunning] = useState(false);
+  const [runError, setRunError] = useState("");
+  const [latestRun, setLatestRun] = useState(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [tick, setTick] = useState(1);
+  const [pipeFail, setPipeFail] = useState(false);
 
   const fetchRuns = async () => {
     try {
       setLoading(true);
       setError("");
-
-      const response = await fetch(
-        `${API_URL}/api/runs`
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message ||
-            "Failed to fetch runs"
-        );
-      }
-
-      setRuns(
-        Array.isArray(data)
-          ? data
-          : []
-      );
-    } catch (error) {
-      setError(
-        error.message ||
-          "Failed to load runs."
-      );
+      const response = await fetch(`${API_URL}/api/runs`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to load runs.");
+      setRuns(Array.isArray(data) ? data : data.runs || []);
+    } catch (err) {
+      setError(err.message || "Unable to load runs.");
     } finally {
       setLoading(false);
     }
   };
 
-  /* =========================
-     RUN AGENT
-  ========================= */
-
-  const runAgent = async () => {
-    if (!prompt.trim()) {
-      setRunError(
-        "Please enter a prompt."
-      );
-
-      setRunSuccess("");
-
-      return;
-    }
-
-    try {
-      setRunLoading(true);
-      setRunError("");
-      setRunSuccess("");
-
-      // Start execution flow
-      setActiveFlowStep(0);
-
-      // Move to Router
-      const routerTimer = setTimeout(() => {
-        setActiveFlowStep(1);
-      }, 500);
-
-      // Move to AI / Tool
-      const executionTimer = setTimeout(() => {
-        setActiveFlowStep(2);
-      }, 1000);
-
-      const response = await fetch(
-        `${API_URL}/api/ai/run`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-
-          body: JSON.stringify({
-            prompt: prompt.trim()
-          })
-        }
-      );
-
-      const data =
-        await response.json();
-
-      clearTimeout(routerTimer);
-      clearTimeout(executionTimer);
-
-      if (!response.ok) {
-        throw new Error(
-          data.message ||
-            "Failed to run agent."
-        );
-      }
-
-      // Evaluation stage
-      setActiveFlowStep(3);
-
-      await new Promise((resolve) =>
-        setTimeout(resolve, 500)
-      );
-
-      // Result stage
-      setActiveFlowStep(4);
-
-      setPrompt("");
-
-      setRunSuccess(
-        "Agent run completed successfully."
-      );
-
-      await fetchRuns();
-    } catch (error) {
-      setRunError(
-        error.message ||
-          "Failed to run agent."
-      );
-    } finally {
-      setRunLoading(false);
-    }
-  };
-
-  /* =========================
-     INITIAL LOAD
-  ========================= */
-
   useEffect(() => {
     fetchRuns();
   }, []);
 
-  /* =========================
-     FILTERED RUNS
-  ========================= */
+  // Visual progress while the real request is in flight; it holds at
+  // Evaluation until the API responds, then the result stage resolves.
+  useEffect(() => {
+    if (!running) return undefined;
+    const id = setInterval(() => setTick((t) => Math.min(t + 1, 4)), 1100);
+    return () => clearInterval(id);
+  }, [running]);
 
-  const filteredRuns = useMemo(() => {
-    return runs.filter((run) => {
-      const searchText =
-        search.toLowerCase().trim();
+  const runAgent = async () => {
+    if (!prompt.trim()) {
+      setRunError("Please enter a prompt.");
+      return;
+    }
+    try {
+      setTick(1);
+      setPipeFail(false);
+      setRunning(true);
+      setRunError("");
+      setLatestRun(null);
 
-      const matchesSearch =
-        !searchText ||
-        run.prompt
-          ?.toLowerCase()
-          .includes(searchText) ||
-        run.response
-          ?.toLowerCase()
-          .includes(searchText);
+      const response = await fetch(`${API_URL}/api/ai/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt.trim() })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Agent execution failed.");
 
-      const matchesStatus =
-        statusFilter === "all" ||
-        run.status === statusFilter;
+      setLatestRun(data.run || data.result || data);
+      setPrompt("");
+      await fetchRuns();
+    } catch (err) {
+      setPipeFail(true);
+      setRunError(err.message || "Unable to execute agent.");
+    } finally {
+      setRunning(false);
+    }
+  };
 
-      const matchesRoute =
-        routeFilter === "all" ||
-        run.agentDecision?.route ===
-          routeFilter;
-
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesRoute
-      );
-    });
-  }, [
-    runs,
-    search,
-    statusFilter,
-    routeFilter
-  ]);
-
-  /* =========================
-     SUMMARY METRICS
-  ========================= */
-
-  const successfulRuns =
-    runs.filter(
-      (run) =>
-        run.status === "success"
-    ).length;
-
-  const failedRuns =
-    runs.filter(
-      (run) =>
-        run.status === "failed"
-    ).length;
-
-  const totalRuns = runs.length;
-
-  const averageLatency =
-    totalRuns > 0
-      ? Math.round(
-          runs.reduce(
-            (sum, run) =>
-              sum +
-              (run.latency || 0),
-            0
-          ) / totalRuns
-        )
-      : 0;
-
-  const averageEvaluation =
-    totalRuns > 0
-      ? (
-          runs.reduce(
-            (sum, run) =>
-              sum +
-              (run.evaluation
-                ?.overall || 0),
-            0
-          ) / totalRuns
-        ).toFixed(1)
-      : "0.0";
-
-  const totalTokens = runs.reduce(
-    (sum, run) =>
-      sum + (run.tokens || 0),
-    0
+  const filteredRuns = useMemo(
+    () =>
+      runs.filter((run) => {
+        const text = String(run.prompt || "").toLowerCase();
+        return (
+          (!search.trim() || text.includes(search.toLowerCase())) &&
+          (statusFilter === "all" || statusOf(run) === statusFilter.toLowerCase())
+        );
+      }),
+    [runs, search, statusFilter]
   );
 
-  const totalCost = runs.reduce(
-    (sum, run) =>
-      sum + (run.cost || 0),
-    0
-  );
+  const analytics = useMemo(() => {
+    const total = runs.length;
+    const successful = runs.filter((r) => OK.includes(statusOf(r))).length;
+    const failed = runs.filter((r) => BAD.includes(statusOf(r))).length;
+    const lat = runs.map((r) => Number(r.latency_ms ?? r.latencyMs)).filter(Number.isFinite);
+    const tok = runs.map((r) => Number(r.tokens ?? r.totalTokens)).filter(Number.isFinite);
+    return {
+      total,
+      successful,
+      failed,
+      rate: total ? Math.round((successful / total) * 100) : 0,
+      failRate: total ? Math.round((failed / total) * 100) : 0,
+      averageLatency: lat.length ? Math.round(lat.reduce((a, b) => a + b, 0) / lat.length) : 0,
+      totalTokens: tok.reduce((a, b) => a + b, 0)
+    };
+  }, [runs]);
 
-  /* =========================
-     RENDER
-  ========================= */
+  const updateFeedback = (updated) => {
+    if (!updated?._id) return;
+    setRuns((cur) => cur.map((r) => (r._id === updated._id ? updated : r)));
+    if (latestRun?._id === updated._id) setLatestRun(updated);
+  };
+
+  const phase = running ? tick : latestRun || pipeFail ? 6 : -1;
+  const outcome = pipeFail
+    ? "fail"
+    : latestRun
+      ? OK.includes(statusOf(latestRun))
+        ? "pass"
+        : BAD.includes(statusOf(latestRun))
+          ? "fail"
+          : "unknown"
+      : null;
+
+  const readout = running
+    ? `${STAGES[phase].label.toUpperCase()} ${STAGES[phase].sub.toUpperCase()} IN PROGRESS`
+    : outcome === "pass"
+      ? "BUILD PASSED"
+      : outcome === "fail"
+        ? "BUILD FAILED"
+        : outcome
+          ? "RUN LOGGED"
+          : "STANDING BY";
+
+  const recent = runs.slice(0, 5);
 
   return (
-    <div className="app">
-      <header className="dashboard-header">
-        <div>
-          <h1>AgentOps</h1>
-
-          <p>
-            Production AI Agent
-            Monitoring &
-            Evaluation Platform
-          </p>
+    <div className="shell">
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-mark">AO</div>
+          <div>
+            <div className="brand-name">AGENTOPS</div>
+            <div className="brand-sub">AI ENGINEERING OBSERVABILITY</div>
+          </div>
         </div>
 
-        <button
-          className="refresh-button"
-          onClick={fetchRuns}
-        >
-          Refresh
-        </button>
-      </header>
+        <nav className="nav" aria-label="Sections">
+          <a href="#overview"><span>01</span>Overview</a>
+          <a href="#history"><span>02</span>Runs</a>
+          <a href="#latest"><span>03</span>Evaluations</a>
+          <a href="#metrics"><span>04</span>Analytics</a>
+          <a href="#workorder"><span>05</span>Work Orders</a>
+          <a href="#activity"><span>06</span>System Logs</a>
+        </nav>
 
-      <main className="dashboard">
-        {error && (
-          <div className="error-banner">
-            {error}
+        <div className="sys">
+          <div>
+            <i className={`led ${error ? "warn" : ""}`} />
+            {error ? "API UNREACHABLE" : "SYSTEM OPERATIONAL"}
           </div>
-        )}
+          <div>RUNS LOGGED: {analytics.total}</div>
+        </div>
+      </aside>
 
-        {/* =========================
-            RUN AGENT
-        ========================= */}
+      <main className="main">
+        <div className="topbar">
+          <span>SITE // CONTROL ROOM</span>
+          <button type="button" className="btn-ghost" onClick={fetchRuns} disabled={loading}>
+            {loading ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
 
-        <section className="run-agent-section">
-          <div className="run-agent-header">
-            <div>
-              <span className="run-agent-eyebrow">
-                EXECUTION CONTROL
-              </span>
+        {error && <div className="banner" role="alert">{error}</div>}
 
-              <h2>Run Agent</h2>
-
-              <p>
-                Send a prompt and monitor
-                the complete agent
-                execution.
-              </p>
-            </div>
-
-            <div className="run-agent-status">
-              <span className="status-dot"></span>
-              System Ready
+        <section id="overview" className="hero">
+          <div className="eyebrow">AI CONSTRUCTION FACILITY</div>
+          <h1>Site Control</h1>
+          <p>Build. Inspect. Ship reliable agents. Every execution is assembled, traced and scored here.</p>
+          <div className="hazard" />
+          <div className={`panel pipe-panel ${running ? "is-running" : ""}`}>
+            <Pipeline phase={phase} outcome={outcome} running={running} />
+            <div className="readout">
+              <span>STATUS: <b>{readout}</b></span>
+              <span>STAGE: <b>{phase < 0 ? "—" : `${Math.min(phase + 1, 6)}/6`}</b></span>
+              {latestRun && !running && <span>LATENCY: <b>{formatLatency(latestRun.latency_ms ?? latestRun.latencyMs)}</b></span>}
             </div>
           </div>
+        </section>
 
-          <div className="run-agent-input-area">
+        <section id="metrics" className="metrics" aria-label="Site diagnostics">
+          <div className="gauge"><span>Total runs</span><strong>{analytics.total}</strong></div>
+          <div className="gauge">
+            <span>Success rate</span><strong>{analytics.total ? `${analytics.rate}%` : "—"}</strong>
+            <div className="bar green"><i style={{ width: `${analytics.rate}%` }} /></div>
+          </div>
+          <div className="gauge">
+            <span>Failed runs</span><strong>{analytics.failed}</strong>
+            <div className="bar red"><i style={{ width: `${analytics.failRate}%` }} /></div>
+          </div>
+          <div className="gauge">
+            <span>Avg latency</span>
+            <strong>{analytics.averageLatency ? `${analytics.averageLatency} ms` : "—"}</strong>
+          </div>
+          <div className="gauge"><span>Total tokens</span><strong>{analytics.totalTokens.toLocaleString()}</strong></div>
+        </section>
+
+        <section id="workorder" className="sec">
+          <div className="sec-head"><h2>New AI work order</h2><small>EXECUTE</small></div>
+          <div className="panel order">
             <textarea
               value={prompt}
-              onChange={(event) =>
-                setPrompt(
-                  event.target.value
-                )
-              }
-              placeholder="What would you like the agent to do?"
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe the task for the agent..."
+              rows={4}
+              disabled={running}
+              aria-label="Agent prompt"
             />
-
-            <button
-              type="button"
-              onClick={runAgent}
-              disabled={runLoading}
-              className={`run-agent-button ${
-                runLoading
-                  ? "is-running"
-                  : ""
-              }`}
-            >
-              {runLoading ? (
-                <>
-                  <span className="button-spinner"></span>
-                  Processing Agent...
-                </>
-              ) : (
-                "Run Agent →"
-              )}
-            </button>
+            <div className="order-foot">
+              <span className="route">MODEL: <b>{latestRun?.model || "auto"}</b></span>
+              <span className="route">TOOL: <b>{latestRun ? get(latestRun, "tool") : "auto-select"}</b></span>
+              <span className="route">{prompt.length} chars</span>
+              <button type="button" className="btn-run" onClick={runAgent} disabled={running || !prompt.trim()}>
+                {running && <span className="spin" />}
+                {running ? "BUILDING..." : "RUN AGENT"}
+              </button>
+            </div>
+            {runError && <div className="banner" role="alert">{runError}</div>}
           </div>
-
-          {/* =========================
-              EXECUTION FLOW
-          ========================= */}
-
-          <div className="execution-flow">
-            <div
-              className={`flow-step ${
-                activeFlowStep === 0
-                  ? "active"
-                  : ""
-              }`}
-            >
-              <span className="flow-number">
-                01
-              </span>
-
-              <span>Prompt</span>
-            </div>
-
-            <span className="flow-line"></span>
-
-            <div
-              className={`flow-step ${
-                activeFlowStep === 1
-                  ? "active"
-                  : ""
-              }`}
-            >
-              <span className="flow-number">
-                02
-              </span>
-
-              <span>Router</span>
-            </div>
-
-            <span className="flow-line"></span>
-
-            <div
-              className={`flow-step ${
-                activeFlowStep === 2
-                  ? "active"
-                  : ""
-              }`}
-            >
-              <span className="flow-number">
-                03
-              </span>
-
-              <span>AI / Tool</span>
-            </div>
-
-            <span className="flow-line"></span>
-
-            <div
-              className={`flow-step ${
-                activeFlowStep === 3
-                  ? "active"
-                  : ""
-              }`}
-            >
-              <span className="flow-number">
-                04
-              </span>
-
-              <span>Evaluation</span>
-            </div>
-
-            <span className="flow-line"></span>
-
-            <div
-              className={`flow-step ${
-                activeFlowStep === 4
-                  ? "active"
-                  : ""
-              }`}
-            >
-              <span className="flow-number">
-                05
-              </span>
-
-              <span>Result</span>
-            </div>
-          </div>
-
-          {runError && (
-            <div className="error-banner">
-              {runError}
-            </div>
-          )}
-
-          {runSuccess && (
-            <div className="run-success">
-              {runSuccess}
-            </div>
-          )}
         </section>
 
-        {/* =========================
-            SUMMARY
-        ========================= */}
-
-        <section className="summary-section">
-          <SummaryCard
-            title="Total Runs"
-            value={totalRuns}
-            subtitle="Tracked agent executions"
-          />
-
-          <SummaryCard
-            title="Successful"
-            value={successfulRuns}
-            subtitle="Completed successfully"
-          />
-
-          <SummaryCard
-            title="Failed"
-            value={failedRuns}
-            subtitle="Requires investigation"
-          />
-
-          <SummaryCard
-            title="Avg Latency"
-            value={`${averageLatency} ms`}
-            subtitle="Average agent response time"
-          />
-
-          <SummaryCard
-            title="Avg Evaluation"
-            value={`${averageEvaluation}/10`}
-            subtitle="Automated quality score"
-          />
-
-          <SummaryCard
-            title="Total Tokens"
-            value={totalTokens}
-            subtitle="Tracked model usage"
-          />
-
-          <SummaryCard
-            title="Total Cost"
-            value={`$${totalCost.toFixed(
-              6
-            )}`}
-            subtitle="Estimated AI cost"
-          />
+        <section id="latest" className="sec">
+          <div className="sec-head"><h2>Latest execution</h2><small>INSPECTION</small></div>
+          <div className="latest-grid">
+            {latestRun ? (
+              <RunCard key={latestRun._id || "latest"} run={latestRun} onFeedback={updateFeedback} />
+            ) : (
+              <div className="empty-state">
+                <strong>{running ? "Build in progress" : "No execution selected"}</strong>
+                <span>{running ? "Waiting for the agent to finish." : "Submit a work order or pick a recent run."}</span>
+              </div>
+            )}
+            <Trace run={latestRun} phase={phase} outcome={outcome} />
+          </div>
         </section>
 
-        {/* =========================
-            VISUAL ANALYTICS
-        ========================= */}
-
-        <VisualAnalytics
-          runs={runs}
-        />
-
-        {/* =========================
-            RUNS
-        ========================= */}
-
-        <section className="runs-section">
-          <div className="section-title">
-            <h2>Agent Runs</h2>
-
-            <p>
-              Inspect, filter and
-              evaluate agent
-              executions
-            </p>
+        <section id="activity" className="sec">
+          <div className="sec-head"><h2>Recent activity</h2><small>SYSTEM LOG</small></div>
+          <div className="activity">
+            {recent.length === 0 ? (
+              <div className="empty-state"><strong>No activity yet</strong></div>
+            ) : (
+              recent.map((run) => (
+                <button type="button" key={run._id} className="act-row" onClick={() => setLatestRun(run)}>
+                  <span className={`badge status-${statusOf(run)}`}>{statusOf(run)}</span>
+                  <span className="act-prompt">{run.prompt || "Untitled run"}</span>
+                  <span className="act-meta">{formatLatency(run.latency_ms ?? run.latencyMs)}</span>
+                  <span className="act-meta">{formatDate(run.createdAt || run.timestamp || run.created_at)}</span>
+                </button>
+              ))
+            )}
           </div>
+        </section>
 
-          <RunFilters
-            search={search}
-            setSearch={setSearch}
-            statusFilter={
-              statusFilter
-            }
-            setStatusFilter={
-              setStatusFilter
-            }
-            routeFilter={routeFilter}
-            setRouteFilter={
-              setRouteFilter
-            }
-          />
+        <section id="history" className="sec">
+          <div className="sec-head"><h2>Run history</h2><small>ARCHIVE</small></div>
+          <div className="run-filters">
+            <input
+              type="search"
+              placeholder="Search runs..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search runs"
+            />
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Filter by status">
+              <option value="all">All statuses</option>
+              <option value="success">Success</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="error">Error</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
 
           {loading ? (
+            <div className="empty-state"><strong>Loading runs...</strong></div>
+          ) : filteredRuns.length === 0 ? (
             <div className="empty-state">
-              Loading runs...
-            </div>
-          ) : filteredRuns.length ===
-            0 ? (
-            <div className="empty-state">
-              No runs match the
-              current filters.
+              <strong>No runs found</strong>
+              <span>Execute an agent or change your filters.</span>
             </div>
           ) : (
             <div className="runs-list">
-              {filteredRuns.map(
-                (run) => (
-                  <RunCard
-                    key={run._id}
-                    run={run}
-                    onFeedback={
-                      fetchRuns
-                    }
-                  />
-                )
-              )}
+              {filteredRuns.map((run) => (
+                <RunCard key={run._id} run={run} onFeedback={updateFeedback} />
+              ))}
             </div>
           )}
         </section>

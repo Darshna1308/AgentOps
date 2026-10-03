@@ -20,7 +20,6 @@ logger.info("server_startup", {
 });
 
 app.use(express.json());
-
 app.use(helmet());
 
 /* =========================
@@ -28,10 +27,17 @@ app.use(helmet());
 ========================= */
 
 app.use((req, res, next) => {
-  res.header(
-    "Access-Control-Allow-Origin",
-    "https://agentops-self.vercel.app"
-  );
+  const allowedOrigins = [
+    "https://agentops-self.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:5174"
+  ];
+
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
 
   res.header(
     "Access-Control-Allow-Headers",
@@ -40,7 +46,7 @@ app.use((req, res, next) => {
 
   res.header(
     "Access-Control-Allow-Methods",
-    "GET, POST, PUT, OPTIONS"
+    "GET, POST, PUT, DELETE, OPTIONS"
   );
 
   if (req.method === "OPTIONS") {
@@ -65,17 +71,17 @@ const aiRateLimiter = rateLimit({
 ========================= */
 
 const PORT = process.env.PORT || 5000;
-
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL;
 
 if (!AI_SERVICE_URL) {
-  throw new Error(
-    "AI_SERVICE_URL is not configured"
-  );
+  throw new Error("AI_SERVICE_URL is not configured");
 }
+
 console.log("AUTH LOGIN ROUTE REGISTERED");
+
 app.post("/api/auth/login", async (req, res, next) => {
   console.log("LOGIN REQUEST RECEIVED");
+
   try {
     const { username, password } = req.body;
 
@@ -142,73 +148,50 @@ app.get("/", (req, res) => {
 
 /* =========================================================
    SAFE CALCULATOR
-   ========================================================= */
+========================================================= */
 
 function safeCalculate(expression) {
-
-  const cleanedExpression =
-    expression
-      .replace(/×/g, "*")
-      .replace(/÷/g, "/")
-      .replace(/−/g, "-")
-      .replace(/,/g, "")
-      .replace(/%/g, "/100")
-      .trim();
+  const cleanedExpression = expression
+    .replace(/×/g, "*")
+    .replace(/÷/g, "/")
+    .replace(/−/g, "-")
+    .replace(/,/g, "")
+    .replace(/%/g, "/100")
+    .trim();
 
   if (!cleanedExpression) {
-    throw new Error(
-      "Empty mathematical expression"
-    );
+    throw new Error("Empty mathematical expression");
   }
 
-  if (
-    !/^[0-9+\-*/().\s]+$/.test(
-      cleanedExpression
-    )
-  ) {
-    throw new Error(
-      "Invalid characters in expression"
-    );
+  if (!/^[0-9+\-*/().\s]+$/.test(cleanedExpression)) {
+    throw new Error("Invalid characters in expression");
   }
 
   let position = 0;
 
   function skipSpaces() {
     while (
-      position <
-        cleanedExpression.length &&
-      /\s/.test(
-        cleanedExpression[position]
-      )
+      position < cleanedExpression.length &&
+      /\s/.test(cleanedExpression[position])
     ) {
       position++;
     }
   }
 
   function parseNumber() {
-
     skipSpaces();
 
     const start = position;
-
     let decimalCount = 0;
 
-    while (
-      position <
-      cleanedExpression.length
-    ) {
-
-      const char =
-        cleanedExpression[position];
+    while (position < cleanedExpression.length) {
+      const char = cleanedExpression[position];
 
       if (char === ".") {
-
         decimalCount++;
 
         if (decimalCount > 1) {
-          throw new Error(
-            "Invalid number format"
-          );
+          throw new Error("Invalid number format");
         }
 
         position++;
@@ -223,63 +206,42 @@ function safeCalculate(expression) {
     }
 
     if (start === position) {
-      throw new Error(
-        "Expected a number"
-      );
+      throw new Error("Expected a number");
     }
 
     const value = Number(
-      cleanedExpression.slice(
-        start,
-        position
-      )
+      cleanedExpression.slice(start, position)
     );
 
     if (!Number.isFinite(value)) {
-      throw new Error(
-        "Invalid number"
-      );
+      throw new Error("Invalid number");
     }
 
     return value;
   }
 
   function parseFactor() {
-
     skipSpaces();
 
-    if (
-      cleanedExpression[position] === "+"
-    ) {
+    if (cleanedExpression[position] === "+") {
       position++;
       return parseFactor();
     }
 
-    if (
-      cleanedExpression[position] === "-"
-    ) {
+    if (cleanedExpression[position] === "-") {
       position++;
       return -parseFactor();
     }
 
-    if (
-      cleanedExpression[position] === "("
-    ) {
-
+    if (cleanedExpression[position] === "(") {
       position++;
 
-      const value =
-        parseExpression();
+      const value = parseExpression();
 
       skipSpaces();
 
-      if (
-        cleanedExpression[position] !==
-        ")"
-      ) {
-        throw new Error(
-          "Missing closing parenthesis"
-        );
+      if (cleanedExpression[position] !== ")") {
+        throw new Error("Missing closing parenthesis");
       }
 
       position++;
@@ -291,36 +253,23 @@ function safeCalculate(expression) {
   }
 
   function parseTerm() {
-
-    let value =
-      parseFactor();
+    let value = parseFactor();
 
     while (true) {
-
       skipSpaces();
 
-      const operator =
-        cleanedExpression[position];
+      const operator = cleanedExpression[position];
 
-      if (
-        operator !== "*" &&
-        operator !== "/"
-      ) {
+      if (operator !== "*" && operator !== "/") {
         break;
       }
 
       position++;
 
-      const nextValue =
-        parseFactor();
+      const nextValue = parseFactor();
 
-      if (
-        operator === "/" &&
-        nextValue === 0
-      ) {
-        throw new Error(
-          "Division by zero"
-        );
+      if (operator === "/" && nextValue === 0) {
+        throw new Error("Division by zero");
       }
 
       if (operator === "*") {
@@ -334,28 +283,20 @@ function safeCalculate(expression) {
   }
 
   function parseExpression() {
-
-    let value =
-      parseTerm();
+    let value = parseTerm();
 
     while (true) {
-
       skipSpaces();
 
-      const operator =
-        cleanedExpression[position];
+      const operator = cleanedExpression[position];
 
-      if (
-        operator !== "+" &&
-        operator !== "-"
-      ) {
+      if (operator !== "+" && operator !== "-") {
         break;
       }
 
       position++;
 
-      const nextValue =
-        parseTerm();
+      const nextValue = parseTerm();
 
       if (operator === "+") {
         value += nextValue;
@@ -367,24 +308,16 @@ function safeCalculate(expression) {
     return value;
   }
 
-  const result =
-    parseExpression();
+  const result = parseExpression();
 
   skipSpaces();
 
-  if (
-    position !==
-    cleanedExpression.length
-  ) {
-    throw new Error(
-      "Invalid expression"
-    );
+  if (position !== cleanedExpression.length) {
+    throw new Error("Invalid expression");
   }
 
   if (!Number.isFinite(result)) {
-    throw new Error(
-      "Calculation produced an invalid result"
-    );
+    throw new Error("Calculation produced an invalid result");
   }
 
   return result;
@@ -392,17 +325,13 @@ function safeCalculate(expression) {
 
 /* =========================================================
    CALCULATOR TOOL
-   ========================================================= */
+========================================================= */
 
 function calculatorTool(expression) {
-
-  const startTime =
-    Date.now();
+  const startTime = Date.now();
 
   try {
-
-    const result =
-      safeCalculate(expression);
+    const result = safeCalculate(expression);
 
     return {
       tool: "calculator",
@@ -411,9 +340,7 @@ function calculatorTool(expression) {
       status: "success",
       latency: Date.now() - startTime
     };
-
   } catch (error) {
-
     return {
       tool: "calculator",
       input: expression,
@@ -426,33 +353,26 @@ function calculatorTool(expression) {
 
 /* =========================================================
    TEXT ANALYZER TOOL
-   ========================================================= */
+========================================================= */
 
 function textAnalyzerTool(text) {
-
-  const startTime =
-    Date.now();
+  const startTime = Date.now();
 
   try {
+    const wordCount = text
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .length;
 
-    const wordCount =
-      text
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean)
-        .length;
+    const characterCount = text.length;
 
-    const characterCount =
-      text.length;
-
-    const sentenceCount =
-      text
-        .split(/[.!?]+/)
-        .filter(
-          sentence =>
-            sentence.trim().length > 0
-        )
-        .length;
+    const sentenceCount = text
+      .split(/[.!?]+/)
+      .filter(
+        sentence => sentence.trim().length > 0
+      )
+      .length;
 
     const result = {
       wordCount,
@@ -467,9 +387,7 @@ function textAnalyzerTool(text) {
       status: "success",
       latency: Date.now() - startTime
     };
-
   } catch (error) {
-
     return {
       tool: "text-analyzer",
       input: text,
@@ -482,12 +400,9 @@ function textAnalyzerTool(text) {
 
 /* =========================================================
    MATH NORMALIZATION
-   ========================================================= */
+========================================================= */
 
-function normalizeMathExpression(
-  expression
-) {
-
+function normalizeMathExpression(expression) {
   return expression
     .replace(/×/g, "*")
     .replace(/÷/g, "/")
@@ -507,43 +422,29 @@ function normalizeMathExpression(
 
 /* =========================================================
    EXTRACT CALCULATOR EXPRESSIONS
-   ========================================================= */
+========================================================= */
 
-function extractCalculatorExpressions(
-  prompt
-) {
-
-  const lowerPrompt =
-    prompt.toLowerCase();
-
+function extractCalculatorExpressions(prompt) {
+  const lowerPrompt = prompt.toLowerCase();
   const expressions = [];
 
   /*
-   Detect phrases such as:
+    Detect phrases such as:
 
-   Calculate 25 multiplied by 16
-   calculate 400 divided by 8
-   calculate (25 + 5) * 2
+    Calculate 25 multiplied by 16
+    Calculate 400 divided by 8
+    Calculate (25 + 5) * 2
   */
 
-  const calculateMatches =
-    prompt.match(
-      /calculate\s+(.+?)(?=\s+and\s+(?:then\s+)?calculate|\s*$)/gi
-    );
+  const calculateMatches = prompt.match(
+    /calculate\s+(.+?)(?=\s+and\s+(?:then\s+)?calculate|\s*$)/gi
+  );
 
   if (calculateMatches) {
-
-    for (
-      const match of calculateMatches
-    ) {
-
-      const raw =
-        match
-          .replace(
-            /^calculate\s+/i,
-            ""
-          )
-          .trim();
+    for (const match of calculateMatches) {
+      const raw = match
+        .replace(/^calculate\s+/i, "")
+        .trim();
 
       const normalized =
         normalizeMathExpression(raw);
@@ -553,34 +454,27 @@ function extractCalculatorExpressions(
         /[+\-*/]/.test(normalized) &&
         /\d/.test(normalized)
       ) {
-        expressions.push(
-          normalized
-        );
+        expressions.push(normalized);
       }
     }
   }
 
   /*
-   Detect direct expressions such as:
+    Detect direct expressions such as:
 
-   25 + 16
-   (25 + 5) * 2
+    25 + 16
+    (25 + 5) * 2
   */
 
   if (
     expressions.length === 0 &&
-    /\d\s*[+\-*/]\s*\d/.test(
-      lowerPrompt
-    )
+    /\d\s*[+\-*/]\s*\d/.test(lowerPrompt)
   ) {
-
-    const expressionMatch =
-      prompt.match(
-        /(?:\(|\d)[0-9+\-*/().%\s]*(?:\d|\))/
-      );
+    const expressionMatch = prompt.match(
+      /(?:\(?\d)[0-9+\-*/().%\s]*(?:\d\)?)/ 
+    );
 
     if (expressionMatch) {
-
       const normalized =
         normalizeMathExpression(
           expressionMatch[0]
@@ -590,9 +484,7 @@ function extractCalculatorExpressions(
         normalized &&
         /[+\-*/]/.test(normalized)
       ) {
-        expressions.push(
-          normalized
-        );
+        expressions.push(normalized);
       }
     }
   }
@@ -602,16 +494,12 @@ function extractCalculatorExpressions(
 
 /* =========================================================
    EXTRACT TEXT ANALYSIS
-   ========================================================= */
+========================================================= */
 
-function extractTextForAnalysis(
-  prompt
-) {
-
-  const match =
-    prompt.match(
-      /analyze\s+(?:this\s+)?text\s*:\s*([\s\S]+)/i
-    );
+function extractTextForAnalysis(prompt) {
+  const match = prompt.match(
+    /analyze\s+(?:this\s+)?text\s*:\s*([\s\S]+)/i
+  );
 
   if (!match) {
     return null;
@@ -622,19 +510,16 @@ function extractTextForAnalysis(
 
 /* =========================================================
    EVALUATION
-   ========================================================= */
+========================================================= */
 
 function evaluateRun({
   prompt,
   response,
   toolCalls
 }) {
-
-  const hasFailedTool =
-    toolCalls.some(
-      tool =>
-        tool.status === "failed"
-    );
+  const hasFailedTool = toolCalls.some(
+    tool => tool.status === "failed"
+  );
 
   let relevance = 9;
   let quality = 9;
@@ -642,25 +527,18 @@ function evaluateRun({
     "Response is relevant and handles the request correctly.";
 
   if (hasFailedTool) {
-
     relevance = 5;
     quality = 10;
 
     reason =
       "The requested tool encountered a failure, but the agent handled the tool failure and explained the result clearly.";
-
-  } else if (
-    toolCalls.length > 0
-  ) {
-
+  } else if (toolCalls.length > 0) {
     relevance = 9;
     quality = 9;
 
     reason =
       "The agent selected the appropriate tool and provided a clear response based on the tool result.";
-
   } else {
-
     relevance = 9;
     quality = 9;
 
@@ -668,13 +546,12 @@ function evaluateRun({
       "The response directly addresses the user's request.";
   }
 
-  const overall =
-    Number(
-      (
-        (relevance + quality) /
-        2
-      ).toFixed(1)
-    );
+  const overall = Number(
+    (
+      (relevance + quality) /
+      2
+    ).toFixed(1)
+  );
 
   return {
     relevance,
@@ -686,50 +563,39 @@ function evaluateRun({
 
 /* =========================================================
    AI RUN
-   ========================================================= */
+========================================================= */
 
 app.post(
   "/api/ai/run",
   aiRateLimiter,
   async (req, res, next) => {
-
-    const startTime =
-      Date.now();
+    const startTime = Date.now();
 
     try {
-
-      const {
-        prompt
-      } = req.body;
+      const { prompt } = req.body;
 
       /* -------------------------
          Prompt validation
       ------------------------- */
 
       if (
-        typeof prompt !==
-        "string" ||
+        typeof prompt !== "string" ||
         prompt.trim().length === 0
       ) {
-
         return res.status(400).json({
           message:
             "Prompt must be a non-empty string"
         });
       }
 
-      if (
-        prompt.length > 5000
-      ) {
-
+      if (prompt.length > 5000) {
         return res.status(400).json({
           message:
             "Prompt must not exceed 5000 characters"
         });
       }
 
-      const cleanPrompt =
-        prompt.trim();
+      const cleanPrompt = prompt.trim();
 
       logger.info(
         "ai_run_started",
@@ -755,24 +621,20 @@ app.post(
           cleanPrompt
         );
 
-      let route =
-        "direct-ai";
+      let route = "direct-ai";
 
       let routeReason =
         "No tool pattern detected; sending request directly to the AI service.";
 
-      let promptForAI =
-        cleanPrompt;
+      let promptForAI = cleanPrompt;
 
       /* =====================================================
          CALCULATOR ROUTING
       ===================================================== */
 
       if (
-        calculatorExpressions.length >
-        0
+        calculatorExpressions.length > 0
       ) {
-
         route = "tool";
 
         routeReason =
@@ -787,28 +649,19 @@ app.post(
         );
 
         for (
-          const expression
-          of calculatorExpressions
+          const expression of calculatorExpressions
         ) {
-
           const toolResult =
-            calculatorTool(
-              expression
-            );
+            calculatorTool(expression);
 
-          toolCalls.push(
-            toolResult
-          );
+          toolCalls.push(toolResult);
 
           logger.info(
             "tool_execution",
             {
-              tool:
-                toolResult.tool,
-              status:
-                toolResult.status,
-              latency:
-                toolResult.latency
+              tool: toolResult.tool,
+              status: toolResult.status,
+              latency: toolResult.latency
             }
           );
         }
@@ -823,13 +676,17 @@ app.post(
 
         promptForAI = `
 The user asked:
+
 ${cleanPrompt}
 
 Calculator tool results:
+
 ${toolSummary}
 
 Respond clearly to the user based on these calculator results.
+
 If a calculator tool failed, explain the failure clearly.
+
 Do not invent a different calculation.
 `;
       }
@@ -838,10 +695,7 @@ Do not invent a different calculation.
          TEXT ANALYZER ROUTING
       ===================================================== */
 
-      else if (
-        textToAnalyze
-      ) {
-
+      else if (textToAnalyze) {
         route = "tool";
 
         routeReason =
@@ -856,27 +710,24 @@ Do not invent a different calculation.
             textToAnalyze
           );
 
-        toolCalls.push(
-          toolResult
-        );
+        toolCalls.push(toolResult);
 
         logger.info(
           "tool_execution",
           {
-            tool:
-              toolResult.tool,
-            status:
-              toolResult.status,
-            latency:
-              toolResult.latency
+            tool: toolResult.tool,
+            status: toolResult.status,
+            latency: toolResult.latency
           }
         );
 
         promptForAI = `
 The user asked:
+
 ${cleanPrompt}
 
 Text analyzer tool result:
+
 ${toolResult.output}
 
 Explain the analysis clearly to the user.
@@ -888,7 +739,6 @@ Explain the analysis clearly to the user.
       ===================================================== */
 
       else {
-
         logger.info(
           "direct_ai_route_selected"
         );
@@ -901,32 +751,25 @@ Explain the analysis clearly to the user.
       let aiResponse;
 
       try {
-
         const response =
           await axios.post(
             `${AI_SERVICE_URL}/run`,
             null,
             {
               params: {
-                prompt:
-                  promptForAI
+                prompt: promptForAI
               },
               timeout: 60000
             }
           );
 
-        aiResponse =
-          response.data;
-
+        aiResponse = response.data;
       } catch (error) {
-
         logger.error(
           "ai_service_error",
           {
-            message:
-              error.message,
-            code:
-              error.code
+            message: error.message,
+            code: error.code
           }
         );
 
@@ -935,71 +778,42 @@ Explain the analysis clearly to the user.
         ------------------------- */
 
         try {
-
           const failedRun =
             await AgentRun.create({
-              prompt:
-                cleanPrompt,
-
-              response:
-                "",
-
-              status:
-                "failed",
-
+              prompt: cleanPrompt,
+              response: "",
+              status: "failed",
               model:
                 "openai/gpt-oss-20b",
-
               latency:
                 Date.now() -
                 startTime,
-
-              tokens:
-                0,
-
-              cost:
-                0,
-
-              toolsUsed:
-                [
-                  ...new Set(
-                    toolCalls.map(
-                      tool =>
-                        tool.tool
-                    )
+              tokens: 0,
+              cost: 0,
+              toolsUsed: [
+                ...new Set(
+                  toolCalls.map(
+                    tool => tool.tool
                   )
-                ],
-
+                )
+              ],
               toolCalls,
-
               agentDecision: {
                 route,
-                reason:
-                  routeReason,
-
-                toolsSelected:
-                  [
-                    ...new Set(
-                      toolCalls.map(
-                        tool =>
-                          tool.tool
-                      )
+                reason: routeReason,
+                toolsSelected: [
+                  ...new Set(
+                    toolCalls.map(
+                      tool => tool.tool
                     )
-                  ]
+                  )
+                ]
               },
-
               evaluation: {
-                relevance:
-                  null,
-
-                quality:
-                  null,
-
-                overall:
-                  null,
-
-                reason:
-                  ""
+                relevance: null,
+                quality: null,
+                overall: null,
+                reason: ""
               }
             });
 
@@ -1010,11 +824,7 @@ Explain the analysis clearly to the user.
                 failedRun._id.toString()
             }
           );
-
-        } catch (
-          saveError
-        ) {
-
+        } catch (saveError) {
           logger.error(
             "failed_run_save_error",
             {
@@ -1035,51 +845,35 @@ Explain the analysis clearly to the user.
       ===================================================== */
 
       const responseText =
-        aiResponse.response ||
-        "";
+        aiResponse.response || "";
 
       const agentLatency =
-        Date.now() -
-        startTime;
+        Date.now() - startTime;
 
       const tokens =
-        aiResponse.tokens ||
-        0;
+        aiResponse.tokens || 0;
 
-      /*
-        Estimated cost placeholder.
-        This keeps the existing AgentOps
-        cost-tracking field active.
-      */
-
-      const cost =
-        Number(
-          (
-            tokens *
-            0.0000002
-          ).toFixed(8)
-        );
+      const cost = Number(
+        (
+          tokens *
+          0.0000002
+        ).toFixed(8)
+      );
 
       const evaluation =
         evaluateRun({
-          prompt:
-            cleanPrompt,
-
-          response:
-            responseText,
-
+          prompt: cleanPrompt,
+          response: responseText,
           toolCalls
         });
 
-      const toolsUsed =
-        [
-          ...new Set(
-            toolCalls.map(
-              tool =>
-                tool.tool
-            )
+      const toolsUsed = [
+        ...new Set(
+          toolCalls.map(
+            tool => tool.tool
           )
-        ];
+        )
+      ];
 
       /* =====================================================
          SAVE RUN
@@ -1087,39 +881,21 @@ Explain the analysis clearly to the user.
 
       const savedRun =
         await AgentRun.create({
-          prompt:
-            cleanPrompt,
-
-          response:
-            responseText,
-
-          status:
-            "success",
-
+          prompt: cleanPrompt,
+          response: responseText,
+          status: "success",
           model:
             "openai/gpt-oss-20b",
-
-          latency:
-            agentLatency,
-
+          latency: agentLatency,
           tokens,
-
           cost,
-
           toolsUsed,
-
           toolCalls,
-
           agentDecision: {
             route,
-
-            reason:
-              routeReason,
-
-            toolsSelected:
-              toolsUsed
+            reason: routeReason,
+            toolsSelected: toolsUsed
           },
-
           evaluation
         });
 
@@ -1128,64 +904,35 @@ Explain the analysis clearly to the user.
         {
           runId:
             savedRun._id.toString(),
-
-          status:
-            "success",
-
+          status: "success",
           route,
-
-          latency:
-            agentLatency,
-
+          latency: agentLatency,
           tokens,
-
           toolsUsed
         }
       );
 
       return res.json({
-        runId:
-          savedRun._id,
-
-        prompt:
-          cleanPrompt,
-
-        response:
-          responseText,
-
-        status:
-          "success",
-
+        runId: savedRun._id,
+        prompt: cleanPrompt,
+        response: responseText,
+        status: "success",
         model:
           aiResponse.model ||
           "openai/gpt-oss-20b",
-
-        latency:
-          agentLatency,
-
+        latency: agentLatency,
         tokens,
-
         cost,
-
         toolsUsed,
-
         toolCalls,
-
         agentDecision: {
           route,
-
-          reason:
-            routeReason,
-
-          toolsSelected:
-            toolsUsed
+          reason: routeReason,
+          toolsSelected: toolsUsed
         },
-
         evaluation
       });
-
     } catch (error) {
-
       next(error);
     }
   }
@@ -1193,14 +940,12 @@ Explain the analysis clearly to the user.
 
 /* =========================================================
    GET ALL RUNS
-   ========================================================= */
+========================================================= */
 
 app.get(
   "/api/runs",
   async (req, res, next) => {
-
     try {
-
       const runs =
         await AgentRun.find()
           .sort({
@@ -1209,9 +954,7 @@ app.get(
           .limit(100);
 
       res.json(runs);
-
     } catch (error) {
-
       next(error);
     }
   }
@@ -1219,14 +962,13 @@ app.get(
 
 /* =========================================================
    FEEDBACK
-   ========================================================= */
+========================================================= */
 
 app.post(
   "/api/runs/:id/feedback",
+  authMiddleware,
   async (req, res, next) => {
-
     try {
-
       const {
         rating,
         comment
@@ -1238,10 +980,8 @@ app.post(
 
       if (
         rating !== "good" &&
-        rating !==
-          "needs_improvement"
+        rating !== "needs_improvement"
       ) {
-
         return res.status(400).json({
           message:
             "Rating must be either 'good' or 'needs_improvement'"
@@ -1254,10 +994,8 @@ app.post(
 
       if (
         comment !== undefined &&
-        typeof comment !==
-          "string"
+        typeof comment !== "string"
       ) {
-
         return res.status(400).json({
           message:
             "Comment must be a string"
@@ -1268,7 +1006,6 @@ app.post(
         typeof comment === "string" &&
         comment.length > 1000
       ) {
-
         return res.status(400).json({
           message:
             "Comment must not exceed 1000 characters"
@@ -1281,7 +1018,6 @@ app.post(
         );
 
       if (!run) {
-
         return res.status(404).json({
           message:
             "Run not found"
@@ -1290,12 +1026,8 @@ app.post(
 
       run.humanFeedback = {
         rating,
-
-        comment:
-          comment || "",
-
-        submittedAt:
-          new Date()
+        comment: comment || "",
+        submittedAt: new Date()
       };
 
       await run.save();
@@ -1305,7 +1037,6 @@ app.post(
         {
           runId:
             run._id.toString(),
-
           rating
         }
       );
@@ -1313,13 +1044,10 @@ app.post(
       res.json({
         message:
           "Feedback saved successfully",
-
         feedback:
           run.humanFeedback
       });
-
     } catch (error) {
-
       next(error);
     }
   }
@@ -1327,7 +1055,7 @@ app.post(
 
 /* =========================================================
    CENTRALIZED ERROR HANDLER
-   ========================================================= */
+========================================================= */
 
 app.use(
   (
@@ -1336,28 +1064,19 @@ app.use(
     res,
     next
   ) => {
-
     logger.error(
       "unhandled_error",
       {
-        method:
-          req.method,
-
-        path:
-          req.path,
-
-        message:
-          error.message
+        method: req.method,
+        path: req.path,
+        message: error.message
       }
     );
 
     const statusCode =
-      error.statusCode ||
-      500;
+      error.statusCode || 500;
 
-    res.status(
-      statusCode
-    ).json({
+    res.status(statusCode).json({
       message:
         statusCode === 500
           ? "Internal server error"
@@ -1368,18 +1087,15 @@ app.use(
 
 /* =========================================================
    SERVER START
-   ========================================================= */
+========================================================= */
 
 app.listen(
   PORT,
   () => {
-
     logger.info(
       "server_started",
       {
-        port:
-          PORT,
-
+        port: PORT,
         aiServiceUrl:
           AI_SERVICE_URL
       }
